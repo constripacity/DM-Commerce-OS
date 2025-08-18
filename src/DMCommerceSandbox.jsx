@@ -17,7 +17,7 @@
 // - Replace createFakePaymentLink with Stripe Checkout Sessions.
 // ------------------------------------------------------------
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 // ----------------------------- Utilities -----------------------------
 const uid = () => Math.random().toString(36).slice(2);
@@ -173,16 +173,6 @@ export default function DMCommerceSandbox() {
     setLog((l) => [{ id: uid(), ts: now(), ...entry }, ...l].slice(0, 300));
   }
 
-  function upsertThread(thread) {
-    setThreads((prev) => {
-      const i = prev.findIndex((x) => x.id === thread.id);
-      if (i === -1) return [thread, ...prev];
-      const next = [...prev];
-      next[i] = thread;
-      return next;
-    });
-  }
-
   function pushMessage(threadId, msg) {
     setThreads((prev) => prev.map(t => t.id === threadId ? { ...t, messages: [...t.messages, msg] } : t));
   }
@@ -242,7 +232,7 @@ export default function DMCommerceSandbox() {
     if (intent === INTENTS.PRICE || intent === INTENTS.AVAIL) {
       const item = catalog.search(text);
       if (item) {
-        pushMessage(threadId, { id: uid(), from: "agent", text: `💬 ${item.title}\nPrice: ${currency(item.price, item.currency)}\nReply: \"buy ${item.sku} 1\" to get a payment link.`, ts: now() });
+        pushMessage(threadId, { id: uid(), from: "agent", text: `💬 ${item.title}\nPrice: ${currency(item.price, item.currency)}\nReply: "buy ${item.sku} 1" to get a payment link.`, ts: now() });
       } else {
         pushMessage(threadId, { id: uid(), from: "agent", text: "Can you share the product name or SKU?", ts: now() });
       }
@@ -294,7 +284,7 @@ export default function DMCommerceSandbox() {
       const items = o.items.map(i => `${i.sku} x${i.qty} @${i.price}`).join("; ");
       return [o.id, cust, o.provider, o.status, o.amount, o.currency, items, o.ts];
     });
-    const csv = [header.join(","), ...rows.map(r => r.map(x => `"${String(x).replaceAll('"','""')}"`).join(","))].join("\n");
+    const csv = [header.join(","), ...rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(","))].join("\n");
     downloadText(`orders_${Date.now()}.csv`, csv);
   }
 
