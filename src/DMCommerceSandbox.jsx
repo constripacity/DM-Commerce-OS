@@ -291,9 +291,12 @@ export default function DMCommerceSandbox() {
   // UI helpers
   function ThreadItem({ t }) {
     const last = t.messages[t.messages.length - 1];
+    const threadCls = t.id === activeThreadId
+      ? themeStyles[theme].thread.active
+      : `border-transparent ${themeStyles[theme].thread.hover}`;
     return (
       <button
-        className={`w-full text-left p-3 rounded-xl mb-2 border ${t.id===activeThreadId?"bg-gray-100 border-gray-300":"border-transparent hover:bg-gray-50"}`}
+        className={`w-full text-left p-3 rounded-xl mb-2 border transition-colors ${threadCls}`}
         onClick={() => setActiveThreadId(t.id)}
       >
         <div className="flex justify-between">
@@ -308,9 +311,9 @@ export default function DMCommerceSandbox() {
   function MessageBubble({ m }) {
     const isUser = m.from === "user";
     const isAgent = m.from === "agent";
-    const bg = isUser ? "bg-white border" : isAgent ? "bg-blue-50 border border-blue-200" : "bg-green-50 border border-green-200";
+    const bubble = isUser ? themeStyles[theme].bubble.user : isAgent ? themeStyles[theme].bubble.agent : themeStyles[theme].bubble.system;
     return (
-      <div className={`max-w-[80%] p-3 rounded-2xl my-1 ${bg}`}> 
+      <div className={`max-w-[80%] p-3 rounded-2xl my-1 border transition-colors ${bubble}`}>
         <div className="text-xs opacity-60 mb-1">{isUser?"Customer":"Agent"}{m.from === "system"?" (system)":""} • {new Date(m.ts).toLocaleTimeString()}</div>
         <div className="whitespace-pre-wrap">{m.text}</div>
       </div>
@@ -323,14 +326,56 @@ export default function DMCommerceSandbox() {
     return SAMPLE_CATALOG.filter(x => x.title.toLowerCase().includes(q) || x.sku.toLowerCase().includes(q));
   }, [search]);
 
-  const THEMES = ["light", "serene", "dark"];
-  const themeIcons = { light: "🌞", serene: "🌄", dark: "🌙" };
+  const THEMES = ["sunset", "sky", "dark"];
+  const themeIcons = { sunset: "🌅", sky: "📡", dark: "🌙" };
   const themeStyles = {
-    light: { base: "bg-white text-gray-900", bar: "bg-white/80", panel: "bg-gray-50" },
-    serene: { base: "bg-blue-50 text-blue-900", bar: "bg-blue-100/80", panel: "bg-blue-50" },
-    dark: { base: "bg-gray-900 text-gray-100", bar: "bg-gray-900/80", panel: "bg-gray-800" },
+    sunset: {
+      base: "bg-gradient-to-br from-pink-50 via-purple-50 to-yellow-50 text-gray-800",
+      bar: "bg-gradient-to-r from-pink-500 via-purple-500 to-yellow-500 text-white",
+      panel: "bg-white/70",
+      bubble: {
+        user: "bg-white border-pink-200",
+        agent: "bg-purple-50 border-purple-200",
+        system: "bg-yellow-50 border-yellow-200",
+      },
+      thread: { active: "bg-pink-100 border-pink-300", hover: "hover:bg-pink-50" },
+      divider: "bg-pink-200/40",
+      toggle: "border-white/40 bg-white/20 text-white",
+      startBtn: { active: "bg-red-500/20 border-red-400", inactive: "bg-green-500/20 border-green-400" },
+      panelHover: "hover:bg-pink-50",
+    },
+    sky: {
+      base: "bg-sky-50 text-sky-900",
+      bar: "bg-sky-600 text-white",
+      panel: "bg-white",
+      bubble: {
+        user: "bg-white border-sky-200",
+        agent: "bg-sky-100 border-sky-200",
+        system: "bg-indigo-50 border-indigo-200",
+      },
+      thread: { active: "bg-sky-100 border-sky-300", hover: "hover:bg-sky-50" },
+      divider: "bg-sky-200",
+      toggle: "border-white/40 bg-white/20 text-white",
+      startBtn: { active: "bg-red-500/20 border-red-400", inactive: "bg-green-500/20 border-green-400" },
+      panelHover: "hover:bg-sky-50",
+    },
+    dark: {
+      base: "bg-gray-900 text-gray-100",
+      bar: "bg-gray-800 text-gray-100",
+      panel: "bg-gray-800",
+      bubble: {
+        user: "bg-gray-700 border-gray-600",
+        agent: "bg-gray-700 border-gray-600",
+        system: "bg-gray-700 border-gray-600",
+      },
+      thread: { active: "bg-gray-700 border-gray-600", hover: "hover:bg-gray-800" },
+      divider: "bg-gray-700",
+      toggle: "border-gray-600 bg-gray-700 text-gray-100",
+      startBtn: { active: "bg-red-900/40 border-red-700", inactive: "bg-green-900/40 border-green-700" },
+      panelHover: "hover:bg-gray-700",
+    },
   };
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("sunset");
   const cycleTheme = () => setTheme(t => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]);
 
   return (
@@ -343,17 +388,24 @@ export default function DMCommerceSandbox() {
             <div className="text-xs opacity-70">Fake chats • Fake payments • Real product thinking</div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={cycleTheme} className="p-2 rounded-full border transition-colors hover:opacity-80" title={`Theme: ${theme}`}>
+            <button
+              onClick={cycleTheme}
+              className={`p-2 rounded-full transition-colors hover:opacity-80 border ${themeStyles[theme].toggle}`}
+              title={`Theme: ${theme}`}
+            >
               {themeIcons[theme]}
             </button>
             <Toggle label="WhatsApp" on={connected.whatsapp} onToggle={(v)=>setConnected(c=>({...c,whatsapp:v}))} />
             <Toggle label="Stripe" on={connected.stripe} onToggle={(v)=>setConnected(c=>({...c,stripe:v}))} />
             <Toggle label="PayPal" on={connected.paypal} onToggle={(v)=>setConnected(c=>({...c,paypal:v}))} />
-            <div className="h-6 w-px bg-gray-200"/>
+            <div className={`h-6 w-px ${themeStyles[theme].divider}`}/>
             <label className="text-sm flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" checked={autoReply} onChange={e=>setAutoReply(e.target.checked)} /> Auto-Reply
             </label>
-            <button className={`px-3 py-1.5 rounded-xl text-sm border ${simRunning?"bg-red-50 border-red-200":"bg-green-50 border-green-200"}`} onClick={()=>setSimRunning(v=>!v)}>
+            <button
+              className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${simRunning?themeStyles[theme].startBtn.active:themeStyles[theme].startBtn.inactive}`}
+              onClick={()=>setSimRunning(v=>!v)}
+            >
               {simRunning?"■ Stop Simulation":"▶ Start Simulation"}
             </button>
           </div>
@@ -425,7 +477,7 @@ export default function DMCommerceSandbox() {
             <input className="w-full border rounded-xl px-3 py-2 text-sm mb-2" placeholder="Search title or SKU..." value={search} onChange={(e)=>setSearch(e.target.value)} />
             <div className="max-h-64 overflow-auto pr-2">
               {filteredCatalog.map(it => (
-                <div key={it.sku} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50">
+                <div key={it.sku} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${themeStyles[theme].panelHover}`}>
                   <img src={it.image} alt="" className="h-10 w-10 rounded-lg object-cover"/>
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{it.title}</div>
