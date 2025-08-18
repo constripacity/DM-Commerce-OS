@@ -18,6 +18,8 @@
 // ------------------------------------------------------------
 
 import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import ThemeToggle from "./ThemeToggle";
 
 // ----------------------------- Utilities -----------------------------
 const uid = () => Math.random().toString(36).slice(2);
@@ -308,9 +310,9 @@ export default function DMCommerceSandbox() {
   function MessageBubble({ m }) {
     const isUser = m.from === "user";
     const isAgent = m.from === "agent";
-    const bg = isUser ? "bg-white border" : isAgent ? "bg-blue-50 border border-blue-200" : "bg-green-50 border border-green-200";
+    const bg = isUser ? "bg-white border text-gray-800" : isAgent ? "bg-blue-50 border border-blue-200 text-gray-800" : "bg-green-50 border border-green-200 text-gray-800";
     return (
-      <div className={`max-w-[80%] p-3 rounded-2xl my-1 ${bg}`}> 
+      <div className={`max-w-[80%] p-3 rounded-2xl my-1 ${bg}`}>
         <div className="text-xs opacity-60 mb-1">{isUser?"Customer":"Agent"}{m.from === "system"?" (system)":""} • {new Date(m.ts).toLocaleTimeString()}</div>
         <div className="whitespace-pre-wrap">{m.text}</div>
       </div>
@@ -324,9 +326,14 @@ export default function DMCommerceSandbox() {
   }, [search]);
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <motion.div
+      className="min-h-screen w-full bg-bg text-text"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       {/* Top Bar */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+      <div className="sticky top-0 z-10 bg-bg/80 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             <div className="text-xl font-bold">DM Commerce OS — Sandbox</div>
@@ -340,6 +347,7 @@ export default function DMCommerceSandbox() {
             <label className="text-sm flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" checked={autoReply} onChange={e=>setAutoReply(e.target.checked)} /> Auto-Reply
             </label>
+            <ThemeToggle />
             <button className={`px-3 py-1.5 rounded-xl text-sm border ${simRunning?"bg-red-50 border-red-200":"bg-green-50 border-green-200"}`} onClick={()=>setSimRunning(v=>!v)}>
               {simRunning?"■ Stop Simulation":"▶ Start Simulation"}
             </button>
@@ -479,7 +487,7 @@ export default function DMCommerceSandbox() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

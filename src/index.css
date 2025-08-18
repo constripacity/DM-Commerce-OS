@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg: #f5f6fa;
+  --text: #333;
+  --accent: #4a90e2;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.theme-dark {
+  --bg: #2E2E2E;
+  --text: #f0f0f0;
+  --accent: #69a6a9;
+}
+
+body.theme-pastel {
+  --bg: #f0eaff;
+  --text: #323232;
+  --accent: #6ca6c1;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+a, button {
+  color: var(--accent);
+  transition: color 0.3s ease;
+}
