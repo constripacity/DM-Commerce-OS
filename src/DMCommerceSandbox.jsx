@@ -17,7 +17,7 @@
 // - Replace createFakePaymentLink with Stripe Checkout Sessions.
 // ------------------------------------------------------------
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 // ----------------------------- Utilities -----------------------------
 const uid = () => Math.random().toString(36).slice(2);
@@ -173,16 +173,6 @@ export default function DMCommerceSandbox() {
     setLog((l) => [{ id: uid(), ts: now(), ...entry }, ...l].slice(0, 300));
   }
 
-  function upsertThread(thread) {
-    setThreads((prev) => {
-      const i = prev.findIndex((x) => x.id === thread.id);
-      if (i === -1) return [thread, ...prev];
-      const next = [...prev];
-      next[i] = thread;
-      return next;
-    });
-  }
-
   function pushMessage(threadId, msg) {
     setThreads((prev) => prev.map(t => t.id === threadId ? { ...t, messages: [...t.messages, msg] } : t));
   }
@@ -242,7 +232,7 @@ export default function DMCommerceSandbox() {
     if (intent === INTENTS.PRICE || intent === INTENTS.AVAIL) {
       const item = catalog.search(text);
       if (item) {
-        pushMessage(threadId, { id: uid(), from: "agent", text: `💬 ${item.title}\nPrice: ${currency(item.price, item.currency)}\nReply: \"buy ${item.sku} 1\" to get a payment link.`, ts: now() });
+        pushMessage(threadId, { id: uid(), from: "agent", text: `💬 ${item.title}\nPrice: ${currency(item.price, item.currency)}\nReply: "buy ${item.sku} 1" to get a payment link.`, ts: now() });
       } else {
         pushMessage(threadId, { id: uid(), from: "agent", text: "Can you share the product name or SKU?", ts: now() });
       }
@@ -294,7 +284,7 @@ export default function DMCommerceSandbox() {
       const items = o.items.map(i => `${i.sku} x${i.qty} @${i.price}`).join("; ");
       return [o.id, cust, o.provider, o.status, o.amount, o.currency, items, o.ts];
     });
-    const csv = [header.join(","), ...rows.map(r => r.map(x => `"${String(x).replaceAll('"','""')}"`).join(","))].join("\n");
+    const csv = [header.join(","), ...rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(","))].join("\n");
     downloadText(`orders_${Date.now()}.csv`, csv);
   }
 
@@ -333,16 +323,29 @@ export default function DMCommerceSandbox() {
     return SAMPLE_CATALOG.filter(x => x.title.toLowerCase().includes(q) || x.sku.toLowerCase().includes(q));
   }, [search]);
 
+  const THEMES = ["light", "serene", "dark"];
+  const themeIcons = { light: "🌞", serene: "🌄", dark: "🌙" };
+  const themeStyles = {
+    light: { base: "bg-white text-gray-900", bar: "bg-white/80", panel: "bg-gray-50" },
+    serene: { base: "bg-blue-50 text-blue-900", bar: "bg-blue-100/80", panel: "bg-blue-50" },
+    dark: { base: "bg-gray-900 text-gray-100", bar: "bg-gray-900/80", panel: "bg-gray-800" },
+  };
+  const [theme, setTheme] = useState("light");
+  const cycleTheme = () => setTheme(t => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]);
+
   return (
-    <div className="min-h-screen w-full bg-white">
+    <div className={`min-h-screen w-full transition-colors duration-300 ${themeStyles[theme].base}`}>
       {/* Top Bar */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+      <div className={`sticky top-0 z-10 backdrop-blur border-b transition-colors ${themeStyles[theme].bar}`}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             <div className="text-xl font-bold">DM Commerce OS — Sandbox</div>
             <div className="text-xs opacity-70">Fake chats • Fake payments • Real product thinking</div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={cycleTheme} className="p-2 rounded-full border transition-colors hover:opacity-80" title={`Theme: ${theme}`}>
+              {themeIcons[theme]}
+            </button>
             <Toggle label="WhatsApp" on={connected.whatsapp} onToggle={(v)=>setConnected(c=>({...c,whatsapp:v}))} />
             <Toggle label="Stripe" on={connected.stripe} onToggle={(v)=>setConnected(c=>({...c,stripe:v}))} />
             <Toggle label="PayPal" on={connected.paypal} onToggle={(v)=>setConnected(c=>({...c,paypal:v}))} />
@@ -395,7 +398,7 @@ export default function DMCommerceSandbox() {
                   <div className="text-xs opacity-60">Thread #{activeThread.id.slice(0,6)}</div>
                 </div>
               </div>
-              <div className="flex-1 border rounded-xl p-3 overflow-auto max-h-[60vh] bg-gray-50">
+              <div className={`flex-1 border rounded-xl p-3 overflow-auto max-h-[60vh] transition-colors ${themeStyles[theme].panel}`}>
                 <div className="flex flex-col gap-2">
                   {activeThread.messages.map(m => (
                     <div key={m.id} className={`flex ${m.from === "user"?"justify-start":"justify-end"}`}>
