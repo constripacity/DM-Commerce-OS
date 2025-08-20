@@ -1,7 +1,7 @@
-import DMCommerceSandbox from './DMCommerceSandbox';
+import DMCommerceSandbox from "./DMCommerceSandbox.jsx";
+import OrdersPage from "./OrdersPage.jsx";
 
-function App() {
-  return <DMCommerceSandbox />;
+export default function App() {
+  return window.location.pathname === "/orders" ? <OrdersPage /> : <DMCommerceSandbox />;
 }
 
-export default App;

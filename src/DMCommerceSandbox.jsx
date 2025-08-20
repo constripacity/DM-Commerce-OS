@@ -117,7 +117,13 @@ export default function DMCommerceSandbox() {
   const [autoReply, setAutoReply] = useState(true);
   const [simRunning, setSimRunning] = useState(false);
   const [threads, setThreads] = useState([]); // [{id, contact, messages:[{id,from,text,ts,meta}], cart, status}]
-  const [orders, setOrders] = useState([]);   // [{id, threadId, items:[{sku,qty,price}], amount, currency, provider, status, ts}]
+  const [orders, setOrders] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("orders")) || [];
+    } catch {
+      return [];
+    }
+  });   // [{id, threadId, items:[{sku,qty,price}], amount, currency, provider, status, ts}]
   const [log, setLog] = useState([]);         // webhook/system log
   const [search, setSearch] = useState("");
   const [deliveryInfo, setDeliveryInfo] = useState({ fee: 4.9, etaDays: 2 });
@@ -133,6 +139,10 @@ export default function DMCommerceSandbox() {
     const conv = sentLinks ? Math.round((paid / sentLinks) * 100) : 0;
     return { messages: msgs, links: sentLinks, paid, conv };
   }, [threads, log, orders]);
+
+  useEffect(() => {
+    localStorage.setItem("orders", JSON.stringify(orders));
+  }, [orders]);
 
   // Seed one thread on mount
   useEffect(() => {
@@ -256,9 +266,11 @@ export default function DMCommerceSandbox() {
 
   function createOrderAndSendLink(threadId, cartItems, link) {
     const amount = cartItems.reduce((a, it) => a + it.item.price * it.qty, 0) + deliveryInfo.fee;
+    const t = threads.find(th => th.id === threadId);
     const order = {
       id: uid(),
       threadId,
+      customer: t?.contact?.name || "Unknown",
       items: cartItems.map(ci => ({ sku: ci.item.sku, qty: ci.qty, price: ci.item.price })),
       amount: Math.round((amount + Number.EPSILON) * 100) / 100,
       currency: cartItems[0].item.currency,
@@ -460,7 +472,10 @@ export default function DMCommerceSandbox() {
             <div className="text-sm">Payment links sent: <b>{metrics.links}</b></div>
             <div className="text-sm">Orders paid: <b>{metrics.paid}</b></div>
             <div className="text-sm">Conversion (links → paid): <b>{metrics.conv}%</b></div>
-            <button className="mt-2 px-3 py-2 text-sm rounded-xl border" onClick={exportOrdersCSV}>Export orders CSV</button>
+            <div className="mt-2 flex gap-2">
+              <button className="px-3 py-2 text-sm rounded-xl border" onClick={exportOrdersCSV}>Export orders CSV</button>
+              <a className="px-3 py-2 text-sm rounded-xl border" href="/orders">View orders</a>
+            </div>
           </div>
         </div>
 
