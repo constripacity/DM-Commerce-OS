@@ -328,6 +328,8 @@ export default function DMCommerceSandbox() {
 
   const THEMES = ["sunset", "sky", "dark"];
   const themeIcons = { sunset: "🌅", sky: "📡", dark: "🌙" };
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(false);
   const themeStyles = {
     sunset: {
       base: "bg-gradient-to-br from-pink-100 via-purple-50 to-yellow-100 text-gray-800",
@@ -380,12 +382,26 @@ export default function DMCommerceSandbox() {
 
   return (
     <div className={`min-h-screen w-full transition-colors duration-500 ${themeStyles[theme].base}`}>
+      {(showLeft || showRight) && (
+        <div
+          className="fixed inset-0 bg-black/20 md:hidden"
+          onClick={() => { setShowLeft(false); setShowRight(false); }}
+        />
+      )}
       {/* Top Bar */}
       <div className={`sticky top-0 z-10 backdrop-blur border-b shadow-sm transition-colors ${themeStyles[theme].bar}`}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <div className="text-xl font-bold">DM Commerce OS — Sandbox</div>
-            <div className="text-xs opacity-70">Fake chats • Fake payments • Real product thinking</div>
+          <div className="flex items-center gap-2">
+            <button
+              className="md:hidden p-2 rounded-full border"
+              onClick={() => { setShowLeft(v=>!v); setShowRight(false); }}
+            >
+              ☰
+            </button>
+            <div>
+              <div className="text-xl font-bold">DM Commerce OS — Sandbox</div>
+              <div className="text-xs opacity-70">Fake chats • Fake payments • Real product thinking</div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -395,29 +411,40 @@ export default function DMCommerceSandbox() {
             >
               {themeIcons[theme]}
             </button>
-            <Toggle label="WhatsApp" on={connected.whatsapp} onToggle={(v)=>setConnected(c=>({...c,whatsapp:v}))} />
-            <Toggle label="Stripe" on={connected.stripe} onToggle={(v)=>setConnected(c=>({...c,stripe:v}))} />
-            <Toggle label="PayPal" on={connected.paypal} onToggle={(v)=>setConnected(c=>({...c,paypal:v}))} />
-            <div className={`h-6 w-px ${themeStyles[theme].divider}`}/>
-            <label className="text-sm flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" checked={autoReply} onChange={e=>setAutoReply(e.target.checked)} /> Auto-Reply
-            </label>
             <button
-              className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${simRunning?themeStyles[theme].startBtn.active:themeStyles[theme].startBtn.inactive}`}
-              onClick={()=>setSimRunning(v=>!v)}
+              className="md:hidden p-2 rounded-full border"
+              onClick={() => { setShowRight(v=>!v); setShowLeft(false); }}
             >
-              {simRunning?"■ Stop Simulation":"▶ Start Simulation"}
+              ⋯
             </button>
+            <div className="hidden md:flex items-center gap-3">
+              <Toggle label="WhatsApp" on={connected.whatsapp} onToggle={(v)=>setConnected(c=>({...c,whatsapp:v}))} />
+              <Toggle label="Stripe" on={connected.stripe} onToggle={(v)=>setConnected(c=>({...c,stripe:v}))} />
+              <Toggle label="PayPal" on={connected.paypal} onToggle={(v)=>setConnected(c=>({...c,paypal:v}))} />
+              <div className={`h-6 w-px ${themeStyles[theme].divider}`}/>
+              <label className="text-sm flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" checked={autoReply} onChange={e=>setAutoReply(e.target.checked)} /> Auto-Reply
+              </label>
+              <button
+                className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${simRunning?themeStyles[theme].startBtn.active:themeStyles[theme].startBtn.inactive}`}
+                onClick={()=>setSimRunning(v=>!v)}
+              >
+                {simRunning?"■ Stop Simulation":"▶ Start Simulation"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-12 gap-4">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:grid md:grid-cols-12 gap-4">
         {/* Left: Threads */}
-        <div className="col-span-3">
-          <div className="mb-3">
-            <div className="font-semibold mb-2">Inbox</div>
-            <div className="text-xs opacity-70 mb-2">{threads.length} threads • {metrics.messages} messages</div>
+        <div className={`md:col-span-3 ${showLeft ? '' : 'hidden'} md:block`}>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="font-semibold mb-2">Inbox</div>
+              <div className="text-xs opacity-70 mb-2">{threads.length} threads • {metrics.messages} messages</div>
+            </div>
+            <button className="md:hidden p-1 text-sm" onClick={()=>setShowLeft(false)}>✕</button>
           </div>
           <div className="max-h-[70vh] overflow-auto pr-2">
             {threads.map(t => <ThreadItem key={t.id} t={t} />)}
@@ -438,7 +465,7 @@ export default function DMCommerceSandbox() {
         </div>
 
         {/* Middle: Active Thread */}
-        <div className="col-span-6">
+        <div className={`md:col-span-6 ${showLeft || showRight ? 'hidden md:block' : ''}`}>
           {activeThread ? (
             <div className="h-full flex flex-col">
               <div className="p-3 border rounded-xl mb-2 shadow-sm hover:shadow-md transition-shadow">
@@ -470,7 +497,10 @@ export default function DMCommerceSandbox() {
         </div>
 
         {/* Right: Catalog / Actions */}
-        <div className="col-span-3">
+        <div className={`md:col-span-3 ${showRight ? '' : 'hidden'} md:block`}>
+          <div className="mb-3 flex justify-end md:hidden">
+            <button className="p-1 text-sm" onClick={()=>setShowRight(false)}>✕</button>
+          </div>
           {/* Catalog */}
           <div className="border rounded-xl p-3 mb-3 shadow-sm">
             <div className="font-semibold mb-2">Catalog</div>
