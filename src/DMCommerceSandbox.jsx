@@ -296,7 +296,7 @@ export default function DMCommerceSandbox() {
       : `border-transparent ${themeStyles[theme].thread.hover}`;
     return (
       <button
-        className={`w-full text-left p-3 rounded-xl mb-2 border transition-colors ${threadCls}`}
+        className={`w-full text-left p-3 rounded-xl mb-2 border transition-all duration-200 transform hover:scale-[1.02] hover:shadow ${threadCls}`}
         onClick={() => setActiveThreadId(t.id)}
       >
         <div className="flex justify-between">
@@ -313,7 +313,7 @@ export default function DMCommerceSandbox() {
     const isAgent = m.from === "agent";
     const bubble = isUser ? themeStyles[theme].bubble.user : isAgent ? themeStyles[theme].bubble.agent : themeStyles[theme].bubble.system;
     return (
-      <div className={`max-w-[80%] p-3 rounded-2xl my-1 border transition-colors ${bubble}`}>
+      <div className={`max-w-[80%] p-3 rounded-2xl my-1 border transition-colors animate-fade ${bubble}`}>
         <div className="text-xs opacity-60 mb-1">{isUser?"Customer":"Agent"}{m.from === "system"?" (system)":""} • {new Date(m.ts).toLocaleTimeString()}</div>
         <div className="whitespace-pre-wrap">{m.text}</div>
       </div>
@@ -330,7 +330,7 @@ export default function DMCommerceSandbox() {
   const themeIcons = { sunset: "🌅", sky: "📡", dark: "🌙" };
   const themeStyles = {
     sunset: {
-      base: "bg-gradient-to-br from-pink-50 via-purple-50 to-yellow-50 text-gray-800",
+      base: "bg-gradient-to-br from-pink-100 via-purple-50 to-yellow-100 text-gray-800",
       bar: "bg-gradient-to-r from-pink-500 via-purple-500 to-yellow-500 text-white",
       panel: "bg-white/70",
       bubble: {
@@ -338,37 +338,37 @@ export default function DMCommerceSandbox() {
         agent: "bg-purple-50 border-purple-200",
         system: "bg-yellow-50 border-yellow-200",
       },
-      thread: { active: "bg-pink-100 border-pink-300", hover: "hover:bg-pink-50" },
+      thread: { active: "bg-pink-100 border-pink-300 shadow-md", hover: "hover:bg-pink-50" },
       divider: "bg-pink-200/40",
       toggle: "border-white/40 bg-white/20 text-white",
       startBtn: { active: "bg-red-500/20 border-red-400", inactive: "bg-green-500/20 border-green-400" },
       panelHover: "hover:bg-pink-50",
     },
     sky: {
-      base: "bg-sky-50 text-sky-900",
-      bar: "bg-sky-600 text-white",
-      panel: "bg-white",
+      base: "bg-gradient-to-br from-sky-50 to-indigo-100 text-sky-900",
+      bar: "bg-gradient-to-r from-sky-500 to-indigo-600 text-white",
+      panel: "bg-white/70",
       bubble: {
         user: "bg-white border-sky-200",
         agent: "bg-sky-100 border-sky-200",
         system: "bg-indigo-50 border-indigo-200",
       },
-      thread: { active: "bg-sky-100 border-sky-300", hover: "hover:bg-sky-50" },
+      thread: { active: "bg-sky-100 border-sky-300 shadow-md", hover: "hover:bg-sky-50" },
       divider: "bg-sky-200",
       toggle: "border-white/40 bg-white/20 text-white",
       startBtn: { active: "bg-red-500/20 border-red-400", inactive: "bg-green-500/20 border-green-400" },
       panelHover: "hover:bg-sky-50",
     },
     dark: {
-      base: "bg-gray-900 text-gray-100",
+      base: "bg-gradient-to-br from-gray-800 to-gray-900 text-gray-100",
       bar: "bg-gray-800 text-gray-100",
-      panel: "bg-gray-800",
+      panel: "bg-gray-800/80",
       bubble: {
         user: "bg-gray-700 border-gray-600",
         agent: "bg-gray-700 border-gray-600",
         system: "bg-gray-700 border-gray-600",
       },
-      thread: { active: "bg-gray-700 border-gray-600", hover: "hover:bg-gray-800" },
+      thread: { active: "bg-gray-700 border-gray-600 shadow-md", hover: "hover:bg-gray-800" },
       divider: "bg-gray-700",
       toggle: "border-gray-600 bg-gray-700 text-gray-100",
       startBtn: { active: "bg-red-900/40 border-red-700", inactive: "bg-green-900/40 border-green-700" },
@@ -379,9 +379,9 @@ export default function DMCommerceSandbox() {
   const cycleTheme = () => setTheme(t => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]);
 
   return (
-    <div className={`min-h-screen w-full transition-colors duration-300 ${themeStyles[theme].base}`}>
+    <div className={`min-h-screen w-full transition-colors duration-500 ${themeStyles[theme].base}`}>
       {/* Top Bar */}
-      <div className={`sticky top-0 z-10 backdrop-blur border-b transition-colors ${themeStyles[theme].bar}`}>
+      <div className={`sticky top-0 z-10 backdrop-blur border-b shadow-sm transition-colors ${themeStyles[theme].bar}`}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             <div className="text-xl font-bold">DM Commerce OS — Sandbox</div>
@@ -390,7 +390,7 @@ export default function DMCommerceSandbox() {
           <div className="flex items-center gap-3">
             <button
               onClick={cycleTheme}
-              className={`p-2 rounded-full transition-colors hover:opacity-80 border ${themeStyles[theme].toggle}`}
+              className={`p-2 rounded-full border transform transition-all duration-300 hover:rotate-180 hover:opacity-80 ${themeStyles[theme].toggle}`}
               title={`Theme: ${theme}`}
             >
               {themeIcons[theme]}
@@ -428,7 +428,7 @@ export default function DMCommerceSandbox() {
           </div>
 
           {/* Metrics Card */}
-          <div className="mt-4 p-3 border rounded-xl">
+          <div className="mt-4 p-3 border rounded-xl shadow-sm">
             <div className="font-semibold mb-2">Metrics (live)</div>
             <div className="text-sm">Payment links sent: <b>{metrics.links}</b></div>
             <div className="text-sm">Orders paid: <b>{metrics.paid}</b></div>
@@ -441,7 +441,7 @@ export default function DMCommerceSandbox() {
         <div className="col-span-6">
           {activeThread ? (
             <div className="h-full flex flex-col">
-              <div className="p-3 border rounded-xl mb-2">
+              <div className="p-3 border rounded-xl mb-2 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">{activeThread.contact.name}</div>
@@ -450,7 +450,7 @@ export default function DMCommerceSandbox() {
                   <div className="text-xs opacity-60">Thread #{activeThread.id.slice(0,6)}</div>
                 </div>
               </div>
-              <div className={`flex-1 border rounded-xl p-3 overflow-auto max-h-[60vh] transition-colors ${themeStyles[theme].panel}`}>
+              <div className={`flex-1 border rounded-xl p-3 overflow-auto max-h-[60vh] transition-colors shadow-sm ${themeStyles[theme].panel}`}>
                 <div className="flex flex-col gap-2">
                   {activeThread.messages.map(m => (
                     <div key={m.id} className={`flex ${m.from === "user"?"justify-start":"justify-end"}`}>
@@ -462,7 +462,7 @@ export default function DMCommerceSandbox() {
               <ManualComposer onSend={(text)=>{ pushMessage(activeThread.id, { id: uid(), from: "agent", text, ts: now() }); }} />
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center border rounded-xl text-center p-10">
+              <div className="h-full flex flex-col items-center justify-center border rounded-xl text-center p-10 shadow-sm">
               <div className="text-lg font-semibold mb-2">No thread selected</div>
               <div className="opacity-70">Choose a conversation on the left or start the simulation.</div>
             </div>
@@ -472,19 +472,19 @@ export default function DMCommerceSandbox() {
         {/* Right: Catalog / Actions */}
         <div className="col-span-3">
           {/* Catalog */}
-          <div className="border rounded-xl p-3 mb-3">
+          <div className="border rounded-xl p-3 mb-3 shadow-sm">
             <div className="font-semibold mb-2">Catalog</div>
             <input className="w-full border rounded-xl px-3 py-2 text-sm mb-2" placeholder="Search title or SKU..." value={search} onChange={(e)=>setSearch(e.target.value)} />
             <div className="max-h-64 overflow-auto pr-2">
               {filteredCatalog.map(it => (
-                <div key={it.sku} className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${themeStyles[theme].panelHover}`}>
+                <div key={it.sku} className={`flex items-center gap-2 p-2 rounded-lg transition-colors transform hover:scale-[1.02] ${themeStyles[theme].panelHover}`}>
                   <img src={it.image} alt="" className="h-10 w-10 rounded-lg object-cover"/>
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{it.title}</div>
                     <div className="text-xs opacity-70">{it.sku} • {currency(it.price, it.currency)} • stock {it.stock}</div>
                   </div>
                   {activeThread && (
-                    <button className="text-xs px-2 py-1 border rounded-lg"
+                    <button className="text-xs px-2 py-1 border rounded-lg transition hover:shadow"
                       onClick={()=>handleManualSendLink(activeThread.id, it, 1, connected.stripe?"Stripe":"PayPal")}
                     >Send link</button>
                   )}
@@ -494,19 +494,19 @@ export default function DMCommerceSandbox() {
           </div>
 
           {/* Quick Actions */}
-          <div className="border rounded-xl p-3 mb-3">
+          <div className="border rounded-xl p-3 mb-3 shadow-sm">
             <div className="font-semibold mb-2">Quick Actions</div>
             {activeThread ? (
               <div className="flex flex-col gap-2">
-                <button className="px-3 py-2 text-sm rounded-xl border" onClick={()=>{
+                <button className="px-3 py-2 text-sm rounded-xl border transition hover:shadow" onClick={()=>{
                   const text = `Delivery fee is ${currency(deliveryInfo.fee)}. ETA ${deliveryInfo.etaDays}-${deliveryInfo.etaDays+2} days.`;
                   pushMessage(activeThread.id, { id: uid(), from: "agent", text, ts: now() });
                 }}>Reply delivery info</button>
-                <button className="px-3 py-2 text-sm rounded-xl border" onClick={()=>{
+                <button className="px-3 py-2 text-sm rounded-xl border transition hover:shadow" onClick={()=>{
                   const it = catalog.search("hoodie") || SAMPLE_CATALOG[0];
                   handleManualSendLink(activeThread.id, it, 1, connected.stripe?"Stripe":"PayPal");
                 }}>Build cart + send payment link</button>
-                <button className="px-3 py-2 text-sm rounded-xl border" onClick={()=>{
+                <button className="px-3 py-2 text-sm rounded-xl border transition hover:shadow" onClick={()=>{
                   const o = orders.find(x => x.threadId === activeThread.id && x.status === "link_sent");
                   if (!o) return;
                   setOrders(prev => prev.map(x => x.id === o.id ? { ...x, status: "paid" } : x));
@@ -520,19 +520,19 @@ export default function DMCommerceSandbox() {
           </div>
 
           {/* Settings */}
-          <div className="border rounded-xl p-3">
+          <div className="border rounded-xl p-3 shadow-sm">
             <div className="font-semibold mb-2">Settings</div>
             <div className="text-sm mb-2">Delivery fee</div>
-            <input type="number" step="0.1" className="w-full border rounded-xl px-3 py-2 text-sm mb-2" value={deliveryInfo.fee} onChange={e=>setDeliveryInfo(d=>({...d, fee: parseFloat(e.target.value || 0)}))} />
+            <input type="number" step="0.1" className="w-full border rounded-xl px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-sky-300" value={deliveryInfo.fee} onChange={e=>setDeliveryInfo(d=>({...d, fee: parseFloat(e.target.value || 0)}))} />
             <div className="text-sm mb-2">ETA (days)</div>
-            <input type="number" className="w-full border rounded-xl px-3 py-2 text-sm" value={deliveryInfo.etaDays} onChange={e=>setDeliveryInfo(d=>({...d, etaDays: parseInt(e.target.value||"2",10)}))} />
+            <input type="number" className="w-full border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sky-300" value={deliveryInfo.etaDays} onChange={e=>setDeliveryInfo(d=>({...d, etaDays: parseInt(e.target.value||"2",10)}))} />
           </div>
         </div>
       </div>
 
       {/* Log */}
       <div className="max-w-7xl mx-auto px-4 pb-10">
-        <div className="mt-6 p-3 border rounded-xl">
+        <div className="mt-6 p-3 border rounded-xl shadow-sm">
           <div className="font-semibold mb-2">Event Log (newest first)</div>
           <div className="max-h-64 overflow-auto text-sm">
             {log.map(e => (
@@ -551,7 +551,10 @@ export default function DMCommerceSandbox() {
 // ----------------------------- Small Components -----------------------------
 function Toggle({ label, on, onToggle }) {
   return (
-    <button onClick={()=>onToggle(!on)} className={`text-sm px-3 py-1.5 rounded-xl border ${on?"bg-emerald-50 border-emerald-200":"bg-gray-50 border-gray-200"}`}>
+    <button
+      onClick={() => onToggle(!on)}
+      className={`text-sm px-3 py-1.5 rounded-xl border transition hover:shadow ${on ? "bg-emerald-50 border-emerald-200" : "bg-gray-50 border-gray-200"}`}
+    >
       {on ? "● " : "○ "}{label}
     </button>
   );
@@ -561,8 +564,8 @@ function ManualComposer({ onSend }) {
   const [value, setValue] = useState("");
   return (
     <div className="mt-2 flex gap-2">
-      <input className="flex-1 border rounded-xl px-3 py-2 text-sm" placeholder="Type a reply..." value={value} onChange={e=>setValue(e.target.value)} onKeyDown={e=>{ if (e.key === 'Enter' && value.trim()) { onSend(value.trim()); setValue(""); } }} />
-      <button className="px-3 py-2 text-sm rounded-xl border" onClick={()=>{ if (!value.trim()) return; onSend(value.trim()); setValue(""); }}>Send</button>
+      <input className="flex-1 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sky-300" placeholder="Type a reply..." value={value} onChange={e=>setValue(e.target.value)} onKeyDown={e=>{ if (e.key === 'Enter' && value.trim()) { onSend(value.trim()); setValue(""); } }} />
+      <button className="px-3 py-2 text-sm rounded-xl border transition hover:shadow" onClick={()=>{ if (!value.trim()) return; onSend(value.trim()); setValue(""); }}>Send</button>
     </div>
   );
 }
