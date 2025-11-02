@@ -1,27 +1,129 @@
-DM Commerce OS capabilities
-Front‑end sandbox for messaging commerce – simulates customer chats, Stripe/PayPal payment events, a product catalog, cart flows, and simple metrics so you can refine copy and UX without real APIs
+# DM Commerce OS — Offline DM-to-Checkout Simulator
 
-Configurable connections and simulation controls – toggle WhatsApp, Stripe, and PayPal, enable Auto‑Reply, and start or stop live message/payment simulations with one click
+DM Commerce OS is a self-contained Next.js application that demos how a creator can sell a digital download without touching any external API. It ships with demo auth, a DM simulator, fake checkout that creates orders, analytics, and brand settings — all backed by SQLite and Prisma seed data.
 
-Three themed UI layouts – cycle through “sunset,” “sky,” and “dark” themes via an animated emoji button for peaceful, accessible presentations
+## Overview
 
-Quick‑action panel for agent workflows – prebuilt actions let you send delivery info, generate carts and payment links, or mark orders as paid inside any active thread
+- **End-to-end funnel** – Campaign posts drive a DM keyword that activates scripted auto-replies, leading to checkout and delivery.
+- **DM Studio** – Chat simulator powered by a state machine that stitches together pitch, qualify, checkout, objection, and delivery scripts.
+- **Products & orders** – CRUD interface with validation and instant fake checkout that unlocks the downloadable PDF.
+- **Campaign tooling** – Manage campaigns and export CSV content (10 posts + 10 stories) with hooks and CTA "DM {keyword}".
+- **Analytics & settings** – Seeded funnel metrics blended with live order data plus branded dashboard theming with logo upload.
+- **Offline & educational** – SQLite database with Prisma seed script, no third-party APIs, and Playwright coverage for the primary happy path.
 
-Order management with CSV export – orders track provider, status, amount, and items, and can be exported to a spreadsheet‑friendly CSV for merchant hand‑offs
+## Tech Stack
 
-Event log for debugging – every simulated message and payment event is captured in a scrollable log for auditing and demos
+- **Web**: Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, lucide-react
+- **Server**: Next.js route handlers, Zod validation, bcrypt for the demo password
+- **Data**: Prisma ORM + SQLite (`prisma/dev.db`)
+- **Testing**: Playwright end-to-end suite
 
-These capabilities give the sandbox a realistic feel for conversational commerce flows while remaining entirely front‑end and API‑free.
+## Quickstart
 
-# React + Vite
+```bash
+# Install dependencies
+npm install
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Generate Prisma client & run migrations
+npx prisma migrate dev --name init
 
-Currently, two official plugins are available:
+# Seed demo data (user, products, campaigns, scripts, analytics orders)
+npm run db:seed
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+# Run the dev server on http://localhost:3000
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Set an app secret for cookie signing:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+cp .env.example .env.local
+# Edit .env.local and set APP_SECRET to a random hex string
+```
+
+### Demo Credentials
+
+- Email: `demo@local.test`
+- Password: `demo123`
+
+## Key Features
+
+| Area | Highlights |
+| --- | --- |
+| **Products** | CRUD with Zod validation, price helper, toast feedback, and simulated checkout modal |
+| **Orders** | Filterable table with date bounds and instant download link pointing to `/public/files/*.pdf` |
+| **DM Studio** | Campaign/product selectors, script previews with variables, state-machine auto replies, checkout modal, and delivery follow-up |
+| **Campaigns** | CRUD + CSV export (10 posts & 10 stories) covering transformation, quick tips, myths, and checklists |
+| **Scripts Library** | Categorised templates with variable chips (`{{product}}`, `{{price}}`, `{{keyword}}`) and live preview |
+| **Analytics** | Seeded funnel metrics plus live order totals, sparkline SVG chart, and pipeline summary |
+| **Settings** | Brand name + color editor and local logo upload saved to `/public/uploads` |
+
+## Available Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start Next.js in development mode |
+| `npm run build` / `npm start` | Production build & start |
+| `npm run lint` | Run Next.js linting |
+| `npm run db:seed` | Execute `prisma/seed.ts` via `tsx` |
+| `npm run demo:reset` | Reset database, regenerate Prisma client, and reseed demo data |
+| `npm run test:install` | Install Playwright browser dependencies |
+| `npm run test:e2e` | Run the Playwright flow (spins up dev server automatically) |
+
+## Testing
+
+Playwright global setup calls `npm run demo:reset` to guarantee a clean SQLite file. The main scenario covers:
+
+1. Logging in with the demo account
+2. Creating a product
+3. Running the DM Studio flow (keyword → qualify → checkout → delivery)
+4. Simulating checkout and verifying the order download link
+
+View or edit the test at [`tests/e2e.spec.ts`](tests/e2e.spec.ts).
+
+## Data & Seeds
+
+`prisma/seed.ts` provisions:
+
+- Demo user with bcrypt-hashed password (`demo123`)
+- Two products with local PDFs (`/public/files/creator-guide.pdf`, `/public/files/checklist.pdf`)
+- Six DM scripts spanning pitch, qualify, objections, checkout, and delivery
+- One campaign with keyword `GUIDE`
+- Settings row for brand defaults (`DM Commerce OS`, `#6366F1`)
+- Six historical orders to power analytics trend lines
+
+Run `npm run demo:reset` anytime to rebuild the SQLite database.
+
+## Screenshots to Capture
+
+Place exported images in `/public/screenshots/`:
+
+- `login.png`
+- `dashboard.png`
+- `products.png`
+- `dm-studio.png`
+- `checkout.png`
+- `orders.png`
+- `analytics.png`
+
+## Loom Script
+
+A 90-second narration script lives in [`docs/loom-script.md`](docs/loom-script.md).
+
+## What’s Simulated vs Real
+
+| Real | Simulated |
+| --- | --- |
+| Authenticated session via signed HTTP-only cookie | Payments, email delivery, social DM APIs |
+| File delivery via local `/public/files/*` | External storage or CDN |
+| Prisma-backed persistence | Any third-party analytics or webhook integrations |
+
+## What I Learned
+
+- Designing a reusable DM state machine that plugs in campaign/product variables cleanly.
+- Pairing seeded analytics with live data so demos feel dynamic while remaining offline.
+- Using Playwright with Next.js App Router by spinning up the dev server through `webServer` config and seeding via global setup.
+
+## License
+
+MIT License — see the [LICENSE](LICENSE) file if present. This project is built for portfolio and educational purposes only; it is not intended for production commerce.
