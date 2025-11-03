@@ -83,6 +83,15 @@ export function DMStudioTab() {
   const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? campaigns[0];
   const selectedProduct = products.find((product) => product.id === (selectedProductId ?? products[0]?.id));
 
+  const replacements = React.useMemo(
+    () => ({
+      product: selectedProduct?.title ?? "your product",
+      price: selectedProduct ? formatCurrencyFromCents(selectedProduct.priceCents) : "$0",
+      keyword: selectedCampaign?.keyword ?? "GUIDE",
+    }),
+    [selectedProduct, selectedCampaign]
+  );
+
   React.useEffect(() => {
     async function loadMetadata() {
       try {
@@ -154,17 +163,11 @@ export function DMStudioTab() {
     loadMessages();
   }, [sessionId, toast]);
 
+  const scriptGroups = React.useMemo(() => groupScripts(scripts), [scripts]);
+
   React.useEffect(() => {
     setInspector(buildInspectorState(messages, replacements.keyword));
   }, [messages, replacements.keyword]);
-
-  const scriptGroups = React.useMemo(() => groupScripts(scripts), [scripts]);
-
-  const replacements = React.useMemo(() => ({
-    product: selectedProduct?.title ?? "your product",
-    price: selectedProduct ? formatCurrencyFromCents(selectedProduct.priceCents) : "$0",
-    keyword: selectedCampaign?.keyword ?? "GUIDE",
-  }), [selectedProduct, selectedCampaign]);
 
   const slashCommands = React.useMemo<SlashCommand[]>(() => {
     return Object.entries(scriptSelections)

@@ -130,6 +130,15 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     loadFiles();
   }, []);
 
+  const openCheckoutModal = React.useCallback(
+    (product: Product) => {
+      setCheckoutProduct(product);
+      checkoutForm.reset({ buyerEmail: "", buyerName: "" });
+      setCheckoutOpen(true);
+    },
+    [checkoutForm]
+  );
+
   React.useEffect(() => {
     if (!onRegisterCommands) return;
     const handles: ProductCommandHandles = {
@@ -147,7 +156,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     };
     onRegisterCommands(handles);
     return () => onRegisterCommands(null);
-  }, [onRegisterCommands, products, toast]);
+  }, [onRegisterCommands, products, toast, openCheckoutModal]);
 
   React.useEffect(() => {
     const handle = () => {
@@ -272,15 +281,6 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     });
     setDrawerOpen(true);
   }
-
-  const openCheckoutModal = React.useCallback(
-    (product: Product) => {
-      setCheckoutProduct(product);
-      checkoutForm.reset({ buyerEmail: "", buyerName: "" });
-      setCheckoutOpen(true);
-    },
-    [checkoutForm]
-  );
 
   async function submitProduct(values: ProductFormValues) {
     setSubmitting(true);
