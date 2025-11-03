@@ -1,0 +1,14 @@
+import { cn } from "@/lib/utils";
+
+export function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <kbd
+      className={cn(
+        "inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded border border-border bg-muted px-1.5 text-[10px] font-medium uppercase text-muted-foreground",
+        className
+      )}
+    >
+      {children}
+    </kbd>
+  );
+}

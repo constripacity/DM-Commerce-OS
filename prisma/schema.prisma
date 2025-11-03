@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  priceCents  Int
+  filePath    String
+  createdAt   DateTime @default(now())
+  orders      Order[]
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  buyerName  String
+  buyerEmail String
+  createdAt  DateTime @default(now())
+}
+
+model Script {
+  id        String   @id @default(cuid())
+  name      String
+  body      String
+  category  String
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  keyword   String
+  platform  String
+  startsOn  DateTime
+  endsOn    DateTime
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id         Int     @id @default(1)
+  brandName  String
+  primaryHex String
+  logoPath   String?
+}
