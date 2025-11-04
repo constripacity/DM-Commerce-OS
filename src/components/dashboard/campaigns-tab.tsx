@@ -76,7 +76,7 @@ export function CampaignsTab() {
     loadCampaigns();
   }, [toast]);
 
-  const openCreateDialog = () => {
+  const openCreateDialog = React.useCallback(() => {
     setEditingCampaign(null);
     form.reset({
       name: "",
@@ -100,52 +100,55 @@ export function CampaignsTab() {
     setDialogOpen(true);
   }, [form]);
 
-  const submitCampaign = async (values: CampaignFormValues) => {
-    setSubmitting(true);
-    const body = {
-      ...values,
-      keyword: values.keyword.toUpperCase(),
-    };
+  const submitCampaign = React.useCallback(
+    async (values: CampaignFormValues) => {
+      setSubmitting(true);
+      const body = {
+        ...values,
+        keyword: values.keyword.toUpperCase(),
+      };
 
-    try {
-      if (editingCampaign) {
-        const res = await fetch(`/api/campaigns/${editingCampaign.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+      try {
+        if (editingCampaign) {
+          const res = await fetch(`/api/campaigns/${editingCampaign.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const updated: Campaign = await res.json();
+          setCampaigns((prev) =>
+            prev
+              .map((item) => (item.id === updated.id ? updated : item))
+              .sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
+          );
+          toast({ title: "Campaign updated", description: `${updated.name} refreshed.` });
+        } else {
+          const res = await fetch("/api/campaigns", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const created: Campaign = await res.json();
+          setCampaigns((prev) =>
+            [...prev, created].sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
+          );
+          toast({ title: "Campaign created", description: `${created.name} added.` });
+        }
+        setDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Unable to save campaign",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
         });
-        if (!res.ok) throw new Error(await res.text());
-        const updated: Campaign = await res.json();
-        setCampaigns((prev) =>
-          prev
-            .map((item) => (item.id === updated.id ? updated : item))
-            .sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
-        );
-        toast({ title: "Campaign updated", description: `${updated.name} refreshed.` });
-      } else {
-        const res = await fetch("/api/campaigns", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const created: Campaign = await res.json();
-        setCampaigns((prev) =>
-          [...prev, created].sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
-        );
-        toast({ title: "Campaign created", description: `${created.name} added.` });
+      } finally {
+        setSubmitting(false);
       }
-      setDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Unable to save campaign",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  }, [toast]);
+    },
+    [editingCampaign, toast]
+  );
 
   const handleDelete = React.useCallback(async (campaign: Campaign) => {
     const confirmed = window.confirm(`Delete ${campaign.name}?`);
@@ -164,28 +167,31 @@ export function CampaignsTab() {
     }
   }, [toast]);
 
-  const handleExport = React.useCallback(async (campaign: Campaign) => {
-    try {
-      const res = await fetch(`/api/campaigns/${campaign.id}/export`);
-      if (!res.ok) throw new Error(await res.text());
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `campaign-${campaign.keyword}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast({ title: "CSV ready", description: `Exported hooks for ${campaign.keyword}.` });
-    } catch (error) {
-      toast({
-        title: "Export failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleExport = React.useCallback(
+    async (campaign: Campaign) => {
+      try {
+        const res = await fetch(`/api/campaigns/${campaign.id}/export`);
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `campaign-${campaign.keyword}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "CSV ready", description: `Exported hooks for ${campaign.keyword}.` });
+      } catch (error) {
+        toast({
+          title: "Export failed",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast]
+  );
 
   const columns = React.useMemo<ColumnDef<CampaignRow>[]>(
     () => [
