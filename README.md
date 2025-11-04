@@ -20,26 +20,25 @@ DM Commerce OS is a self-contained Next.js application that demos how a creator 
 
 ## Quickstart
 
-```bash
-# Install dependencies
-npm install
+🚀 **First stop:** the [Beginner Install Kit](docs/BEGINNER-GUIDE.md) covers one-click setup, troubleshooting, and screenshots.
 
-# Generate Prisma client & run migrations
-npx prisma migrate dev --name init
+### One-command install & launch
 
-# Seed demo data (user, products, campaigns, scripts, analytics orders)
-npm run db:seed
-
-# Run the dev server on http://localhost:3000
-npm run dev
+```powershell
+# Windows (PowerShell)
+pnpm run oneclick
+# or
+npm run oneclick
 ```
 
-Set an app secret for cookie signing:
-
 ```bash
-cp .env.example .env.local
-# Edit .env.local and set APP_SECRET to a random hex string
+# macOS / Linux (Terminal)
+pnpm run oneclick
+# or
+npm run oneclick
 ```
+
+The script runs the doctor checks, installs dependencies, prepares Prisma, seeds demo data, and opens `http://localhost:3000/login` automatically.
 
 ### Demo Credentials
 
