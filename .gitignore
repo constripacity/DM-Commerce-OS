@@ -21,6 +21,10 @@
 .prisma
 .sanitized-backup/
 scan-report.json
+.idea/
+.vscode/
+.turbo
+pnpm-debug.log*
 
 # prisma
 dev.db

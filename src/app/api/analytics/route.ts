@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { requireAuthCookie } from "@/lib/auth";
 import { funnelBaseline, funnelDelta, weeklyTrendSeed } from "@/lib/analytics";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   if (!requireAuthCookie(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -68,5 +71,9 @@ export async function GET(request: Request) {
     revenueCents: value.revenue,
   }));
 
-  return NextResponse.json({ funnel, totals, chart, productMix });
+  return NextResponse.json({ funnel, totals, chart, productMix }, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
 }

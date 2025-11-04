@@ -86,7 +86,7 @@ export function CampaignsTab() {
     async function loadCampaigns() {
       try {
         setLoading(true);
-        const res = await fetch("/api/campaigns");
+        const res = await fetch("/api/campaigns", { credentials: "include", cache: "no-store" });
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as Campaign[];
         setCampaigns(data);
@@ -198,6 +198,7 @@ export function CampaignsTab() {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
+            credentials: "include",
           });
           if (!res.ok) throw new Error(await res.text());
           const updated = (await res.json()) as Campaign;
@@ -213,6 +214,7 @@ export function CampaignsTab() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
+            credentials: "include",
           });
           if (!res.ok) throw new Error(await res.text());
           const created = (await res.json()) as Campaign;
@@ -241,7 +243,7 @@ export function CampaignsTab() {
       const confirmed = window.confirm(`Delete ${campaign.name}?`);
       if (!confirmed) return;
       try {
-        const res = await fetch(`/api/campaigns/${campaign.id}`, { method: "DELETE" });
+        const res = await fetch(`/api/campaigns/${campaign.id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(await res.text());
         setCampaigns((prev) => prev.filter((item) => item.id !== campaign.id));
         if (activeCampaignId === campaign.id) {
@@ -275,7 +277,10 @@ export function CampaignsTab() {
           stories: String(options.stories),
           hashtags: options.includeHashtags ? "1" : "0",
         });
-        const res = await fetch(`/api/campaigns/${campaign.id}/export?${params.toString()}`);
+        const res = await fetch(`/api/campaigns/${campaign.id}/export?${params.toString()}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(await res.text());
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);

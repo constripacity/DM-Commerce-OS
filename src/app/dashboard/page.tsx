@@ -21,7 +21,7 @@ import { ScriptsTab } from "@/components/dashboard/scripts-tab";
 import { AnalyticsTab } from "@/components/dashboard/analytics-tab";
 import { SettingsTab } from "@/components/dashboard/settings-tab";
 import { useCommandActions, useCommandCenter } from "@/components/command-palette";
-import { useThemeController } from "@/components/theme-provider";
+import { useThemeController } from "@/components/dashboard/theme-provider";
 
 const tabs: DashboardTabDefinition[] = [
   {
@@ -74,6 +74,10 @@ export default function DashboardPage() {
   const { setOpen } = useCommandCenter();
   const { cycleTheme } = useThemeController();
   const [productCommands, setProductCommands] = React.useState<ProductCommandHandles | null>(null);
+  const handleOpenCommand = React.useCallback(() => setOpen(true), [setOpen]);
+  const focusSearch = React.useCallback(() => {
+    searchRef.current?.focus();
+  }, []);
 
   const navigationActions = React.useMemo(
     () =>
@@ -96,7 +100,7 @@ export default function DashboardPage() {
         section: "Global",
         shortcut: ["/"],
         icon: <Sparkles className="h-4 w-4" />,
-        run: () => searchRef.current?.focus(),
+        run: focusSearch,
       },
       {
         id: "toggle-theme",
@@ -133,7 +137,7 @@ export default function DashboardPage() {
     }
 
     return actions;
-  }, [productCommands, cycleTheme, setActiveTab]);
+  }, [productCommands, cycleTheme, setActiveTab, focusSearch]);
 
   useCommandActions(navigationActions);
   useCommandActions(utilityActions);
@@ -143,12 +147,12 @@ export default function DashboardPage() {
     const handler = (event: KeyboardEvent) => {
       if ((event.key === "/" || event.key === "s") && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
-        searchRef.current?.focus();
+        focusSearch();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [focusSearch]);
 
   return (
     <DashboardDataProvider>
@@ -157,7 +161,7 @@ export default function DashboardPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         searchRef={searchRef}
-        onOpenCommand={() => setOpen(true)}
+        onOpenCommand={handleOpenCommand}
       >
         {activeTab === "products" ? (
           <ProductsTab onRegisterCommands={setProductCommands} />

@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background text-foreground antialiased", inter.variable, jetBrains.variable)}>
+      <body className={cn("min-h-screen bg-background text-foreground antialiased font-sans", inter.variable, jetBrains.variable)}>
         <ThemeProvider>
           <CommandProvider>
             <div className="relative flex min-h-screen flex-col bg-background">

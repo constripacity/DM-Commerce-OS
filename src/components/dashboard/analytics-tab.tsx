@@ -65,7 +65,7 @@ export function AnalyticsTab() {
     async function loadAnalytics() {
       try {
         setLoading(true);
-        const res = await fetch("/api/analytics");
+        const res = await fetch("/api/analytics", { credentials: "include", cache: "no-store" });
         if (!res.ok) {
           throw new Error(await res.text());
         }

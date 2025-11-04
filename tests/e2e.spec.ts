@@ -16,6 +16,7 @@ async function login(page: Page) {
   await page.getByLabel("Password").fill(demoPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+  await page.waitForLoadState("networkidle");
 }
 
 test("complete sandbox flow from product to delivery", async ({ page }) => {

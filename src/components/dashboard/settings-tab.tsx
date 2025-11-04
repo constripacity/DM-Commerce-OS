@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { settingSchema } from "@/lib/validators";
-import { ThemeId, palettes, useThemeController } from "@/components/theme-provider";
+import { ThemeId, palettes, useThemeController } from "@/components/dashboard/theme-provider";
 import { cn } from "@/lib/utils";
 
 const formSchema = settingSchema.extend({
@@ -24,7 +24,7 @@ const formSchema = settingSchema.extend({
 type SettingsFormValues = z.infer<typeof formSchema>;
 
 const fetchSettings = async () => {
-  const response = await fetch("/api/settings");
+  const response = await fetch("/api/settings", { credentials: "include", cache: "no-store" });
   if (!response.ok) {
     throw new Error(await response.text());
   }
@@ -131,6 +131,7 @@ export function SettingsTab() {
       const response = await fetch("/api/settings", {
         method: "PUT",
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -166,7 +167,7 @@ export function SettingsTab() {
   const handleResetDemo = async () => {
     setResetting(true);
     try {
-      const res = await fetch("/api/demo-reset", { method: "POST" });
+      const res = await fetch("/api/demo-reset", { method: "POST", credentials: "include" });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: "Demo data reset", description: "Database reseeded with fresh sandbox content." });
     } catch (error) {

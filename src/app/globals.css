@@ -32,6 +32,21 @@
   color-scheme: light;
 }
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  ::selection {
+    background: hsl(var(--highlight));
+    color: hsl(var(--foreground));
+  }
+}
+
 [data-theme="daybreak"] {
   --surface: 42 92% 98%;
   --highlight: 45 90% 92%;

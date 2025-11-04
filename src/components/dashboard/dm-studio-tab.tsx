@@ -95,7 +95,10 @@ export function DMStudioTab() {
   React.useEffect(() => {
     async function loadMetadata() {
       try {
-        const [campaignRes, scriptRes] = await Promise.all([fetch("/api/campaigns"), fetch("/api/scripts")]);
+        const [campaignRes, scriptRes] = await Promise.all([
+          fetch("/api/campaigns", { credentials: "include", cache: "no-store" }),
+          fetch("/api/scripts", { credentials: "include", cache: "no-store" }),
+        ]);
         if (!campaignRes.ok || !scriptRes.ok) throw new Error("Unable to load DM assets");
         const [campaignData, scriptData] = await Promise.all([campaignRes.json(), scriptRes.json()]);
         setCampaigns(campaignData);
@@ -138,7 +141,10 @@ export function DMStudioTab() {
   React.useEffect(() => {
     async function loadMessages() {
       try {
-        const res = await fetch(`/api/messages?sessionId=${sessionId}`);
+        const res = await fetch(`/api/messages?sessionId=${sessionId}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Unable to load messages");
         const data = await res.json();
         const mapped: ChatMessageItem[] = data.map((item: any) => {
@@ -230,6 +236,7 @@ export function DMStudioTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
     },
     [sessionId]

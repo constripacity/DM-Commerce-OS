@@ -128,7 +128,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     async (product: Product) => {
       if (!window.confirm(`Delete ${product.title}?`)) return;
       try {
-        const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
+        const res = await fetch(`/api/products/${product.id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(await res.text());
         setProducts((prev) => prev.filter((item) => item.id !== product.id));
         toast({ title: "Product removed", description: `${product.title} deleted.` });
@@ -159,7 +159,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
   React.useEffect(() => {
     async function loadFiles() {
       try {
-        const res = await fetch("/api/files");
+        const res = await fetch("/api/files", { credentials: "include", cache: "no-store" });
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as FileOption[];
         setFileOptions(data);
@@ -320,6 +320,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
+            credentials: "include",
           });
           if (!res.ok) throw new Error(await res.text());
           const updated: Product = await res.json();
@@ -330,6 +331,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
+            credentials: "include",
           });
           if (!res.ok) throw new Error(await res.text());
           const created: Product = await res.json();
@@ -360,6 +362,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...values, productId: checkoutProduct.id }),
+          credentials: "include",
         });
         if (!res.ok) throw new Error(await res.text());
         await reloadOrders();
@@ -477,6 +480,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
             priceCents: newPrice,
             filePath: product.filePath,
           }),
+          credentials: "include",
         });
         if (!res.ok) throw new Error(await res.text());
         const updated: Product = await res.json();
@@ -512,6 +516,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
             priceCents: product.priceCents,
             filePath: choice,
           }),
+          credentials: "include",
         });
         if (!res.ok) throw new Error(await res.text());
         const updated: Product = await res.json();

@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { requireAuthCookie } from "@/lib/auth";
 import { campaignPlanToCsv, generateCampaignPlan } from "@/lib/campaigns";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   if (!requireAuthCookie(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -98,7 +98,7 @@ export function ScriptsTab() {
     async function loadScripts() {
       try {
         setLoading(true);
-        const res = await fetch("/api/scripts");
+        const res = await fetch("/api/scripts", { credentials: "include", cache: "no-store" });
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as Script[];
         setScripts(data);
@@ -195,6 +195,7 @@ export function ScriptsTab() {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(values),
+            credentials: "include",
           });
           if (!res.ok) throw new Error(await res.text());
           const updated = (await res.json()) as Script;
@@ -205,6 +206,7 @@ export function ScriptsTab() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(values),
+            credentials: "include",
           });
           if (!res.ok) throw new Error(await res.text());
           const created = (await res.json()) as Script;
@@ -230,7 +232,7 @@ export function ScriptsTab() {
       const confirmed = window.confirm(`Delete ${script.name}?`);
       if (!confirmed) return;
       try {
-        const res = await fetch(`/api/scripts/${script.id}`, { method: "DELETE" });
+        const res = await fetch(`/api/scripts/${script.id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(await res.text());
         setScripts((prev) => prev.filter((item) => item.id !== script.id));
         toast({ title: "Script removed", description: `${script.name} deleted.` });
