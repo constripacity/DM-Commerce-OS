@@ -169,6 +169,108 @@ export function DMStudioTab() {
     setInspector(buildInspectorState(messages, replacements.keyword));
   }, [messages, replacements.keyword]);
 
+  const getScriptBody = React.useCallback(
+    (category: string) => {
+      const resolvedCategory = stageCategoryMap[category as DMFlowStage] ?? category;
+      const scriptId = scriptSelections[resolvedCategory];
+      const script = scripts.find((item) => item.id === scriptId);
+      return script ? fillTemplate(script.body, replacements) : undefined;
+    },
+    [replacements, scriptSelections, scripts]
+  );
+
+  const insertScriptBody = React.useCallback(
+    (body: string) => {
+      const content = fillTemplate(body, replacements);
+      setDraft((prev) => `${prev.trim()}\n${content}`.trimStart());
+    },
+    [replacements]
+  );
+
+  const determineNextScript = React.useCallback(() => {
+    const { completed } = getStageProgress(messages);
+    const nextStage = computeNextStage(completed);
+    if (!nextStage) return null;
+    return getScriptBody(nextStage) ?? null;
+  }, [getScriptBody, messages]);
+
+  const buildFlowContext = React.useCallback(
+    (latestUser: string) => {
+      const dmMessages = messages.map((message) => ({
+        role: message.role,
+        text: message.stage ? attachStageMarker(message.text, message.stage as DMFlowStage) : message.text,
+        stage: message.stage as DMFlowStage | undefined,
+      }));
+      const flowScripts = {
+        pitch: getScriptBody("pitch"),
+        qualify: getScriptBody("qualify"),
+        checkout: getScriptBody("checkout"),
+        delivery: getScriptBody("delivery"),
+        objection: getScriptBody("objection"),
+      };
+      return {
+        messages: dmMessages,
+        latestUserMessage: latestUser,
+        keyword: replacements.keyword,
+        scripts: flowScripts,
+        product: { title: replacements.product, priceCents: selectedProduct?.priceCents ?? 0 },
+      };
+    },
+    [getScriptBody, messages, replacements, selectedProduct]
+  );
+
+  const persistMessage = React.useCallback(
+    async (message: { role: "user" | "assistant"; text: string; stage?: DMFlowStage }) => {
+      const payload = {
+        sessionId,
+        role: message.role,
+        text: message.stage ? attachStageMarker(message.text, message.stage) : message.text,
+      };
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    },
+    [sessionId]
+  );
+
+  const maybeRespond = React.useCallback(
+    async (latestUser: string) => {
+      const context = buildFlowContext(latestUser);
+      const result = getNextAutoReply(context);
+      if (!result) return;
+      setIsTyping(true);
+      const assistantMessage: ChatMessageItem = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        text: result.text,
+        stage: result.stage,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      await persistMessage({ role: "assistant", text: result.text, stage: result.stage });
+      setIsTyping(false);
+    },
+    [buildFlowContext, persistMessage]
+  );
+
+  const handleSend = React.useCallback(async () => {
+    if (!draft.trim()) return;
+    const userMessage: ChatMessageItem = {
+      id: crypto.randomUUID(),
+      role: "user",
+      text: draft,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+    setDraft("");
+    setIsSending(true);
+    setMessages((prev) => [...prev, userMessage]);
+    await persistMessage({ role: "user", text: draft });
+    await maybeRespond(draft);
+    setIsSending(false);
+  }, [draft, maybeRespond, persistMessage]);
+
   const slashCommands = React.useMemo<SlashCommand[]>(() => {
     return Object.entries(scriptSelections)
       .map(([category, scriptId]) => {
@@ -183,7 +285,7 @@ export function DMStudioTab() {
         } satisfies SlashCommand;
       })
       .filter((item): item is SlashCommand => Boolean(item));
-  }, [scriptSelections, scripts]);
+  }, [insertScriptBody, scriptSelections, scripts]);
 
   useHotkeys(
     [
@@ -197,146 +299,48 @@ export function DMStudioTab() {
         },
       },
     ],
-    [scriptSelections, scripts, replacements, messages]
+    [determineNextScript, insertScriptBody]
   );
 
-  function insertScriptBody(body: string) {
-    const content = fillTemplate(body, replacements);
-    setDraft((prev) => `${prev.trim()}\n${content}`.trimStart());
-  }
-
-  function determineNextScript() {
-    const { completed } = getStageProgress(messages);
-    const nextStage = computeNextStage(completed);
-    if (!nextStage) return null;
-    return getScriptBody(nextStage) ?? null;
-  }
-
-  function buildFlowContext(latestUser: string) {
-    const dmMessages = messages.map((message) => ({
-      role: message.role,
-      text: message.stage ? attachStageMarker(message.text, message.stage as DMFlowStage) : message.text,
-      stage: message.stage as DMFlowStage | undefined,
-    }));
-    const flowScripts = {
-      pitch: getScriptBody("pitch"),
-      qualify: getScriptBody("qualify"),
-      checkout: getScriptBody("checkout"),
-      delivery: getScriptBody("delivery"),
-      objection: getScriptBody("objection"),
-    };
-    return {
-      messages: dmMessages,
-      latestUserMessage: latestUser,
-      keyword: replacements.keyword,
-      scripts: flowScripts,
-      product: { title: replacements.product, priceCents: selectedProduct?.priceCents ?? 0 },
-    };
-  }
-
-  function getScriptBody(category: string) {
-    const resolvedCategory = stageCategoryMap[category as DMFlowStage] ?? category;
-    const scriptId = scriptSelections[resolvedCategory];
-    const script = scripts.find((item) => item.id === scriptId);
-    return script ? fillTemplate(script.body, replacements) : undefined;
-  }
-
-  async function handleSend() {
-    if (!draft.trim()) return;
-    const userMessage: ChatMessageItem = {
-      id: crypto.randomUUID(),
-      role: "user",
-      text: draft,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-    setDraft("");
-    setIsSending(true);
-    setMessages((prev) => [...prev, userMessage]);
-    await persistMessage({ role: "user", text: draft });
-    await maybeRespond(draft);
-    setIsSending(false);
-  }
-
-  async function maybeRespond(latestUser: string) {
-    const context = buildFlowContext(latestUser);
-    const result = getNextAutoReply(context);
-    if (!result) return;
-    setIsTyping(true);
-    const assistantMessage: ChatMessageItem = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      text: result.text,
-      stage: result.stage,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-    setMessages((prev) => [...prev, assistantMessage]);
-    await persistMessage({ role: "assistant", text: result.text, stage: result.stage });
-    setIsTyping(false);
-  }
-
-  async function persistMessage(message: { role: "user" | "assistant"; text: string; stage?: DMFlowStage }) {
-    const payload = {
-      sessionId,
-      role: message.role,
-      text: message.stage ? attachStageMarker(message.text, message.stage) : message.text,
-    };
-    await fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  function updateInspector(latestUser: string, stage?: DMFlowStage) {
-    const normalized = latestUser.toLowerCase();
-    const intent = normalized.includes(replacements.keyword.toLowerCase())
-      ? "keyword"
-      : ["yes", "love", "great", "cool"].some((word) => normalized.includes(word))
-      ? "interest"
-      : ["how", "price", "link", "buy"].some((word) => normalized.includes(word))
-      ? "checkout"
-      : ["done", "bought", "purchased"].some((word) => normalized.includes(word))
-      ? "purchase"
-      : "neutral";
-    setInspector({ intent, stage, next: stage });
-  }
-
-  async function resetThread() {
+  const resetThread = React.useCallback(() => {
     setMessages([]);
     setSessionId(crypto.randomUUID());
     toast({ title: "Session reset", description: "Started a fresh DM conversation." });
-  }
+  }, [toast]);
 
-  function handleDragStart(category: string, scriptId: string) {
+  const handleDragStart = React.useCallback((category: string, scriptId: string) => {
     return (event: React.DragEvent<HTMLButtonElement>) => {
       event.dataTransfer.setData("text/plain", JSON.stringify({ category, scriptId }));
     };
-  }
+  }, []);
 
-  function handleDrop(category: string, targetId: string) {
-    return (event: React.DragEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      const data = event.dataTransfer.getData("text/plain");
-      if (!data) return;
-      const parsed = JSON.parse(data) as { category: string; scriptId: string };
-      if (parsed.category !== category) return;
-      setScriptOrder((prev) => {
-        const next = { ...prev };
-        const order = [...(next[category] ?? [])];
-        const fromIndex = order.indexOf(parsed.scriptId);
-        const toIndex = order.indexOf(targetId);
-        if (fromIndex === -1 || toIndex === -1) return prev;
-        order.splice(fromIndex, 1);
-        order.splice(toIndex, 0, parsed.scriptId);
-        next[category] = order;
-        return next;
-      });
-    };
-  }
+  const handleDrop = React.useCallback(
+    (category: string, targetId: string) => {
+      return (event: React.DragEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        const data = event.dataTransfer.getData("text/plain");
+        if (!data) return;
+        const parsed = JSON.parse(data) as { category: string; scriptId: string };
+        if (parsed.category !== category) return;
+        setScriptOrder((prev) => {
+          const next = { ...prev };
+          const order = [...(next[category] ?? [])];
+          const fromIndex = order.indexOf(parsed.scriptId);
+          const toIndex = order.indexOf(targetId);
+          if (fromIndex === -1 || toIndex === -1) return prev;
+          order.splice(fromIndex, 1);
+          order.splice(toIndex, 0, parsed.scriptId);
+          next[category] = order;
+          return next;
+        });
+      };
+    },
+    [setScriptOrder]
+  );
 
-  function allowDrop(event: React.DragEvent<HTMLButtonElement>) {
+  const allowDrop = React.useCallback((event: React.DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
-  }
+  }, []);
 
   const orderedScripts = React.useMemo(() => {
     return scriptGroups.map((group) => {

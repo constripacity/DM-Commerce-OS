@@ -103,6 +103,45 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     [products]
   );
 
+  const openCreateDrawer = React.useCallback(() => {
+    setEditingProduct(null);
+    productForm.reset({ title: "", description: "", price: "29", filePath: "/files/creator-guide.pdf" });
+    setDrawerOpen(true);
+  }, [productForm]);
+
+  const openEditDrawer = React.useCallback(
+    (product: ProductRow) => {
+      setEditingProduct(product);
+      productForm.reset({
+        title: product.title,
+        description: product.description,
+        price: (product.priceCents / 100).toFixed(2),
+        filePath: product.filePath,
+      });
+      setDrawerOpen(true);
+    },
+    [productForm]
+  );
+
+  const handleDelete = React.useCallback(
+    async (product: Product) => {
+      if (!window.confirm(`Delete ${product.title}?`)) return;
+      try {
+        const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        setProducts((prev) => prev.filter((item) => item.id !== product.id));
+        toast({ title: "Product removed", description: `${product.title} deleted.` });
+      } catch (error) {
+        toast({
+          title: "Unable to delete",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    [setProducts, toast]
+  );
+
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -156,9 +195,10 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     };
     onRegisterCommands(handles);
     return () => onRegisterCommands(null);
-  }, [onRegisterCommands, products, toast, openCheckoutModal]);
+  }, [onRegisterCommands, openCheckoutModal, openCreateDrawer, products, toast]);
 
   React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     const handle = () => {
       const primary = products[0];
       if (primary) {
@@ -169,7 +209,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     };
     window.addEventListener("dm-open-checkout", handle);
     return () => window.removeEventListener("dm-open-checkout", handle);
-  }, [products, toast, openCheckoutModal]);
+  }, [openCheckoutModal, products, toast]);
 
   const columns = React.useMemo<ColumnDef<ProductRow>[]>(
     () => [
@@ -244,7 +284,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         ),
       },
     ],
-    []
+    [handleDelete, openCheckoutModal, openEditDrawer]
   );
 
   const table = useReactTable({
@@ -263,113 +303,84 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     globalFilterFn: "includesString",
   });
 
-  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+  const submitProduct = React.useCallback(
+    async (values: ProductFormValues) => {
+      setSubmitting(true);
+      const payload = {
+        title: values.title,
+        description: values.description,
+        priceCents: Math.round(parseFloat(values.price) * 100),
+        filePath: values.filePath,
+      };
 
-  function openCreateDrawer() {
-    setEditingProduct(null);
-    productForm.reset({ title: "", description: "", price: "29", filePath: "/files/creator-guide.pdf" });
-    setDrawerOpen(true);
-  }
-
-  function openEditDrawer(product: ProductRow) {
-    setEditingProduct(product);
-    productForm.reset({
-      title: product.title,
-      description: product.description,
-      price: (product.priceCents / 100).toFixed(2),
-      filePath: product.filePath,
-    });
-    setDrawerOpen(true);
-  }
-
-  async function submitProduct(values: ProductFormValues) {
-    setSubmitting(true);
-    const payload = {
-      title: values.title,
-      description: values.description,
-      priceCents: Math.round(parseFloat(values.price) * 100),
-      filePath: values.filePath,
-    };
-
-    try {
-      if (editingProduct) {
-        const res = await fetch(`/api/products/${editingProduct.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+      try {
+        if (editingProduct) {
+          const res = await fetch(`/api/products/${editingProduct.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const updated: Product = await res.json();
+          setProducts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+          toast({ title: "Product updated", description: `${updated.title} saved successfully.` });
+        } else {
+          const res = await fetch("/api/products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const created: Product = await res.json();
+          setProducts((prev) => [created, ...prev]);
+          toast({ title: "Product created", description: `${created.title} added to your catalog.` });
+        }
+        setDrawerOpen(false);
+        setEditingProduct(null);
+      } catch (error) {
+        toast({
+          title: "Unable to save product",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
         });
-        if (!res.ok) throw new Error(await res.text());
-        const updated: Product = await res.json();
-        setProducts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-        toast({ title: "Product updated", description: `${updated.title} saved successfully.` });
-      } else {
-        const res = await fetch("/api/products", {
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [editingProduct, setProducts, toast, productForm]
+  );
+
+  const submitCheckout = React.useCallback(
+    async (values: CheckoutFormValues) => {
+      if (!checkoutProduct) return;
+      setCheckoutSubmitting(true);
+      try {
+        const res = await fetch("/api/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...values, productId: checkoutProduct.id }),
         });
         if (!res.ok) throw new Error(await res.text());
-        const created: Product = await res.json();
-        setProducts((prev) => [created, ...prev]);
-        toast({ title: "Product created", description: `${created.title} added to your catalog.` });
+        await reloadOrders();
+        toast({
+          title: "Order recorded",
+          description: `${values.buyerName} now has access to ${checkoutProduct.title}.`,
+        });
+        setCheckoutOpen(false);
+      } catch (error) {
+        toast({
+          title: "Checkout failed",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setCheckoutSubmitting(false);
       }
-      setDrawerOpen(false);
-      setEditingProduct(null);
-    } catch (error) {
-      toast({
-        title: "Unable to save product",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  }
+    },
+    [checkoutProduct, reloadOrders, setCheckoutOpen, toast]
+  );
 
-  async function handleDelete(product: Product) {
-    if (!window.confirm(`Delete ${product.title}?`)) return;
-    try {
-      const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await res.text());
-      setProducts((prev) => prev.filter((item) => item.id !== product.id));
-      toast({ title: "Product removed", description: `${product.title} deleted.` });
-    } catch (error) {
-      toast({
-        title: "Unable to delete",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function submitCheckout(values: CheckoutFormValues) {
-    if (!checkoutProduct) return;
-    setCheckoutSubmitting(true);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, productId: checkoutProduct.id }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await reloadOrders();
-      toast({
-        title: "Order recorded",
-        description: `${values.buyerName} now has access to ${checkoutProduct.title}.`,
-      });
-      setCheckoutOpen(false);
-    } catch (error) {
-      toast({
-        title: "Checkout failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckoutSubmitting(false);
-    }
-  }
-
-  function exportCsv() {
+  const exportCsv = React.useCallback(() => {
     const header = ["Title", "Description", "Price", "File", "Created"];
     const rows = table.getFilteredRowModel().rows.map((row) => [
       row.original.title,
@@ -391,16 +402,19 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast({ title: "Export ready", description: "Downloaded products.csv" });
-  }
+  }, [table, toast]);
 
-  function persistViews(next: SavedView[]) {
-    setSavedViews(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    }
-  }
+  const persistViews = React.useCallback(
+    (next: SavedView[]) => {
+      setSavedViews(next);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      }
+    },
+    [setSavedViews]
+  );
 
-  function saveCurrentView() {
+  const saveCurrentView = React.useCallback(() => {
     const name = window.prompt("Name this view", "My filter");
     if (!name) return;
     const next: SavedView = {
@@ -412,25 +426,36 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     persistViews([...savedViews.filter((view) => view.name !== name), next]);
     setActiveView(name);
     toast({ title: "View saved", description: `${name} stored locally.` });
-  }
+  }, [columnFilters, globalFilter, persistViews, savedViews, sorting, toast, setActiveView]);
 
-  function applyView(viewName: string) {
-    const view = savedViews.find((item) => item.name === viewName);
-    if (!view) return;
-    setSorting(view.sorting);
-    setColumnFilters(view.filters);
-    setGlobalFilter(view.globalFilter);
-    setActiveView(viewName);
-  }
+  const applyView = React.useCallback(
+    (viewName: string) => {
+      const view = savedViews.find((item) => item.name === viewName);
+      if (!view) return;
+      setSorting(view.sorting);
+      setColumnFilters(view.filters);
+      setGlobalFilter(view.globalFilter);
+      setActiveView(viewName);
+    },
+    [savedViews, setColumnFilters, setGlobalFilter, setSorting, setActiveView]
+  );
 
-  function deleteView(viewName: string) {
-    persistViews(savedViews.filter((view) => view.name !== viewName));
-    if (activeView === viewName) {
-      setActiveView(null);
-    }
-  }
+  const deleteView = React.useCallback(
+    (viewName: string) => {
+      persistViews(savedViews.filter((view) => view.name !== viewName));
+      if (activeView === viewName) {
+        setActiveView(null);
+      }
+    },
+    [activeView, persistViews, savedViews, setActiveView]
+  );
 
-  async function applyPriceDelta() {
+  const getSelectedProducts = React.useCallback(() => {
+    return table.getSelectedRowModel().rows.map((row) => row.original);
+  }, [table]);
+
+  const applyPriceDelta = React.useCallback(async () => {
+    const selectedRows = getSelectedProducts();
     if (!selectedRows.length) return;
     const input = window.prompt("Adjust price by % (e.g., 10 for +10%)", "5");
     if (!input) return;
@@ -461,9 +486,10 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     }
     toast({ title: "Prices updated", description: `Applied ${delta}% to ${selectedRows.length} products.` });
     setRowSelection({});
-  }
+  }, [getSelectedProducts, setProducts, setRowSelection, toast]);
 
-  async function moveFiles() {
+  const moveFiles = React.useCallback(async () => {
+    const selectedRows = getSelectedProducts();
     if (!selectedRows.length) return;
     if (!fileOptions.length) {
       toast({ title: "No files available", description: "Add PDFs under /public/files first.", variant: "destructive" });
@@ -495,16 +521,17 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     }
     toast({ title: "Files moved", description: `${selectedRows.length} products now point to ${choice}` });
     setRowSelection({});
-  }
+  }, [fileOptions, getSelectedProducts, setProducts, setRowSelection, toast]);
 
-  async function deleteSelected() {
+  const deleteSelected = React.useCallback(async () => {
+    const selectedRows = getSelectedProducts();
     if (!selectedRows.length) return;
     if (!window.confirm(`Delete ${selectedRows.length} selected products?`)) return;
     for (const product of selectedRows) {
       await handleDelete(product);
     }
     setRowSelection({});
-  }
+  }, [getSelectedProducts, handleDelete, setRowSelection]);
 
   return (
     <section className="space-y-6">

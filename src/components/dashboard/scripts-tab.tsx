@@ -116,19 +116,22 @@ export function ScriptsTab() {
     loadScripts();
   }, [toast]);
 
-  const openCreateDrawer = () => {
+  const openCreateDrawer = React.useCallback(() => {
     setEditingScript(null);
     setMonospace(false);
     form.reset({ name: "", body: "", category: "pitch" });
     setDrawerOpen(true);
-  };
+  }, [form]);
 
-  const openEditDrawer = (script: Script) => {
-    setEditingScript(script);
-    setMonospace(false);
-    form.reset({ name: script.name, body: script.body, category: script.category as CategoryValue });
-    setDrawerOpen(true);
-  };
+  const openEditDrawer = React.useCallback(
+    (script: Script) => {
+      setEditingScript(script);
+      setMonospace(false);
+      form.reset({ name: script.name, body: script.body, category: script.category as CategoryValue });
+      setDrawerOpen(true);
+    },
+    [form]
+  );
 
   const filteredScripts = React.useMemo(() => {
     if (filterCategory === "all") return scripts;
@@ -167,7 +170,7 @@ export function ScriptsTab() {
     });
   }, []);
 
-  const handleInsertVariable = (token: string) => {
+  const handleInsertVariable = React.useCallback((token: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     const value = form.getValues("body") ?? "";
@@ -180,67 +183,76 @@ export function ScriptsTab() {
       const cursor = start + token.length;
       textarea.setSelectionRange(cursor, cursor);
     });
-  };
+  }, [form]);
 
-  const submitScript = async (values: ScriptFormValues) => {
-    setSubmitting(true);
-    try {
-      if (editingScript) {
-        pushHistory(editingScript);
-        const res = await fetch(`/api/scripts/${editingScript.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
+  const submitScript = React.useCallback(
+    async (values: ScriptFormValues) => {
+      setSubmitting(true);
+      try {
+        if (editingScript) {
+          pushHistory(editingScript);
+          const res = await fetch(`/api/scripts/${editingScript.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(values),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const updated = (await res.json()) as Script;
+          setScripts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+          toast({ title: "Script updated", description: `${updated.name} saved.` });
+        } else {
+          const res = await fetch("/api/scripts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(values),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const created = (await res.json()) as Script;
+          setScripts((prev) => [created, ...prev]);
+          toast({ title: "Script created", description: `${created.name} added.` });
+        }
+        setDrawerOpen(false);
+      } catch (error) {
+        toast({
+          title: "Unable to save script",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
         });
-        if (!res.ok) throw new Error(await res.text());
-        const updated = (await res.json()) as Script;
-        setScripts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-        toast({ title: "Script updated", description: `${updated.name} saved.` });
-      } else {
-        const res = await fetch("/api/scripts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const created = (await res.json()) as Script;
-        setScripts((prev) => [created, ...prev]);
-        toast({ title: "Script created", description: `${created.name} added.` });
+      } finally {
+        setSubmitting(false);
       }
-      setDrawerOpen(false);
-    } catch (error) {
-      toast({
-        title: "Unable to save script",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    },
+    [editingScript, pushHistory, setDrawerOpen, setScripts, toast]
+  );
 
-  const handleDelete = async (script: Script) => {
-    const confirmed = window.confirm(`Delete ${script.name}?`);
-    if (!confirmed) return;
-    try {
-      const res = await fetch(`/api/scripts/${script.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await res.text());
-      setScripts((prev) => prev.filter((item) => item.id !== script.id));
-      toast({ title: "Script removed", description: `${script.name} deleted.` });
-    } catch (error) {
-      toast({
-        title: "Unable to delete script",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleDelete = React.useCallback(
+    async (script: Script) => {
+      const confirmed = window.confirm(`Delete ${script.name}?`);
+      if (!confirmed) return;
+      try {
+        const res = await fetch(`/api/scripts/${script.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        setScripts((prev) => prev.filter((item) => item.id !== script.id));
+        toast({ title: "Script removed", description: `${script.name} deleted.` });
+      } catch (error) {
+        toast({
+          title: "Unable to delete script",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    [setScripts, toast]
+  );
 
-  const restoreRevision = (scriptId: string, revision: ScriptRevision) => {
-    if (!editingScript || editingScript.id !== scriptId) return;
-    form.setValue("body", revision.body, { shouldDirty: true });
-    toast({ title: "Revision restored", description: `Reverted to edit saved ${timeAgo(revision.updatedAt)} ago.` });
-  };
+  const restoreRevision = React.useCallback(
+    (scriptId: string, revision: ScriptRevision) => {
+      if (!editingScript || editingScript.id !== scriptId) return;
+      form.setValue("body", revision.body, { shouldDirty: true });
+      toast({ title: "Revision restored", description: `Reverted to edit saved ${timeAgo(revision.updatedAt)} ago.` });
+    },
+    [editingScript, form, toast]
+  );
 
   const renderPreviewTokens = (body: string) => {
     return body.split(/(\{\{[^}]+\}\})/g).map((segment, index) => {
@@ -292,7 +304,7 @@ export function ScriptsTab() {
         meta: { className: "w-[160px]" },
       },
     ],
-    []
+    [handleDelete, openEditDrawer]
   );
 
   return (

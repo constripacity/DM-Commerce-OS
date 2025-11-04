@@ -85,7 +85,7 @@ export default function DashboardPage() {
         icon: React.createElement(tab.icon, { className: "h-4 w-4" }),
         run: () => setActiveTab(tab.value),
       })),
-    []
+    [setActiveTab]
   );
 
   const utilityActions = React.useMemo(() => {
@@ -133,12 +133,13 @@ export default function DashboardPage() {
     }
 
     return actions;
-  }, [productCommands, cycleTheme]);
+  }, [productCommands, cycleTheme, setActiveTab]);
 
   useCommandActions(navigationActions);
   useCommandActions(utilityActions);
 
   React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     const handler = (event: KeyboardEvent) => {
       if ((event.key === "/" || event.key === "s") && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();

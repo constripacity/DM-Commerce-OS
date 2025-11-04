@@ -112,7 +112,7 @@ export function OrdersTab() {
         ),
       },
     ],
-    []
+    [setDetailOrder]
   );
 
   const table = useReactTable({

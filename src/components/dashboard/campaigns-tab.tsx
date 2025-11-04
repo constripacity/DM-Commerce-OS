@@ -114,7 +114,7 @@ export function CampaignsTab() {
     if (activeCampaign) {
       setViewDate(new Date(activeCampaign.startsOn));
     }
-  }, [activeCampaign?.startsOn]);
+  }, [activeCampaign]);
 
   const plan = React.useMemo(() => {
     if (!activeCampaign) return [] as CampaignPlanEntry[];
@@ -155,7 +155,7 @@ export function CampaignsTab() {
     return eachDayOfInterval({ start, end });
   }, [viewDate]);
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = React.useCallback(() => {
     setDialogMode("create");
     setEditingCampaign(null);
     setDrawerOpen(true);
@@ -166,143 +166,161 @@ export function CampaignsTab() {
       startsOn: "",
       endsOn: "",
     });
-  };
+  }, [form]);
 
-  const handleOpenEdit = (campaign: Campaign) => {
-    setDialogMode("edit");
-    setEditingCampaign(campaign);
-    setDrawerOpen(true);
-    form.reset({
-      name: campaign.name,
-      keyword: campaign.keyword,
-      platform: campaign.platform as PlatformValue,
-      startsOn: toDateInputValue(campaign.startsOn),
-      endsOn: toDateInputValue(campaign.endsOn),
-    });
-  };
+  const handleOpenEdit = React.useCallback(
+    (campaign: Campaign) => {
+      setDialogMode("edit");
+      setEditingCampaign(campaign);
+      setDrawerOpen(true);
+      form.reset({
+        name: campaign.name,
+        keyword: campaign.keyword,
+        platform: campaign.platform as PlatformValue,
+        startsOn: toDateInputValue(campaign.startsOn),
+        endsOn: toDateInputValue(campaign.endsOn),
+      });
+    },
+    [form]
+  );
 
-  const submitCampaign = async (values: CampaignFormValues) => {
-    setSubmitting(true);
-    const body = {
-      ...values,
-      keyword: values.keyword.toUpperCase(),
-    };
+  const submitCampaign = React.useCallback(
+    async (values: CampaignFormValues) => {
+      setSubmitting(true);
+      const body = {
+        ...values,
+        keyword: values.keyword.toUpperCase(),
+      };
 
-    try {
-      if (dialogMode === "edit" && editingCampaign) {
-        const res = await fetch(`/api/campaigns/${editingCampaign.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+      try {
+        if (dialogMode === "edit" && editingCampaign) {
+          const res = await fetch(`/api/campaigns/${editingCampaign.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const updated = (await res.json()) as Campaign;
+          setCampaigns((prev) =>
+            prev
+              .map((item) => (item.id === updated.id ? updated : item))
+              .sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
+          );
+          setActiveCampaignId(updated.id);
+          toast({ title: "Campaign updated", description: `${updated.name} refreshed.` });
+        } else {
+          const res = await fetch("/api/campaigns", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const created = (await res.json()) as Campaign;
+          setCampaigns((prev) =>
+            [...prev, created].sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
+          );
+          setActiveCampaignId(created.id);
+          toast({ title: "Campaign created", description: `${created.name} added.` });
+        }
+        setDrawerOpen(false);
+      } catch (error) {
+        toast({
+          title: "Unable to save campaign",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
         });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [dialogMode, editingCampaign, setActiveCampaignId, setCampaigns, toast]
+  );
+
+  const handleDelete = React.useCallback(
+    async (campaign: Campaign) => {
+      const confirmed = window.confirm(`Delete ${campaign.name}?`);
+      if (!confirmed) return;
+      try {
+        const res = await fetch(`/api/campaigns/${campaign.id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(await res.text());
-        const updated = (await res.json()) as Campaign;
-        setCampaigns((prev) =>
-          prev
-            .map((item) => (item.id === updated.id ? updated : item))
-            .sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
-        );
-        setActiveCampaignId(updated.id);
-        toast({ title: "Campaign updated", description: `${updated.name} refreshed.` });
-      } else {
-        const res = await fetch("/api/campaigns", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+        setCampaigns((prev) => prev.filter((item) => item.id !== campaign.id));
+        if (activeCampaignId === campaign.id) {
+          setActiveCampaignId(null);
+        }
+        toast({ title: "Campaign removed", description: `${campaign.name} deleted.` });
+      } catch (error) {
+        toast({
+          title: "Unable to delete campaign",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
         });
+      }
+    },
+    [activeCampaignId, setActiveCampaignId, setCampaigns, toast]
+  );
+
+  const openExport = React.useCallback(
+    (campaign: Campaign) => {
+      setExportTarget(campaign);
+      setExportDialogOpen(true);
+    },
+    [setExportDialogOpen]
+  );
+
+  const downloadCsv = React.useCallback(
+    async (campaign: Campaign, options: PlannerOptions) => {
+      try {
+        const params = new URLSearchParams({
+          posts: String(options.posts),
+          stories: String(options.stories),
+          hashtags: options.includeHashtags ? "1" : "0",
+        });
+        const res = await fetch(`/api/campaigns/${campaign.id}/export?${params.toString()}`);
         if (!res.ok) throw new Error(await res.text());
-        const created = (await res.json()) as Campaign;
-        setCampaigns((prev) =>
-          [...prev, created].sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
-        );
-        setActiveCampaignId(created.id);
-        toast({ title: "Campaign created", description: `${created.name} added.` });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `campaign-${campaign.keyword}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "CSV ready", description: `Exported hooks for ${campaign.keyword}.` });
+      } catch (error) {
+        toast({
+          title: "Export failed",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
       }
-      setDrawerOpen(false);
-    } catch (error) {
-      toast({
-        title: "Unable to save campaign",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    },
+    [toast]
+  );
 
-  const handleDelete = async (campaign: Campaign) => {
-    const confirmed = window.confirm(`Delete ${campaign.name}?`);
-    if (!confirmed) return;
-    try {
-      const res = await fetch(`/api/campaigns/${campaign.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await res.text());
-      setCampaigns((prev) => prev.filter((item) => item.id !== campaign.id));
-      if (activeCampaignId === campaign.id) {
-        setActiveCampaignId(null);
+  const copyPlan = React.useCallback(
+    async (entries: CampaignPlanEntry[] = plan) => {
+      if (!entries.length) return;
+      try {
+        setCopying(true);
+        await navigator.clipboard.writeText(campaignPlanToText(entries));
+        toast({ title: "Plan copied", description: "Calendar schedule sent to clipboard." });
+      } catch (error) {
+        toast({
+          title: "Copy failed",
+          description: error instanceof Error ? error.message : "Clipboard not available.",
+          variant: "destructive",
+        });
+      } finally {
+        setCopying(false);
       }
-      toast({ title: "Campaign removed", description: `${campaign.name} deleted.` });
-    } catch (error) {
-      toast({
-        title: "Unable to delete campaign",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+    },
+    [plan, setCopying, toast]
+  );
 
-  const openExport = (campaign: Campaign) => {
-    setExportTarget(campaign);
-    setExportDialogOpen(true);
-  };
-
-  const downloadCsv = async (campaign: Campaign, options: PlannerOptions) => {
-    try {
-      const params = new URLSearchParams({
-        posts: String(options.posts),
-        stories: String(options.stories),
-        hashtags: options.includeHashtags ? "1" : "0",
-      });
-      const res = await fetch(`/api/campaigns/${campaign.id}/export?${params.toString()}`);
-      if (!res.ok) throw new Error(await res.text());
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `campaign-${campaign.keyword}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast({ title: "CSV ready", description: `Exported hooks for ${campaign.keyword}.` });
-    } catch (error) {
-      toast({
-        title: "Export failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const copyPlan = async (entries: CampaignPlanEntry[] = plan) => {
-    if (!entries.length) return;
-    try {
-      setCopying(true);
-      await navigator.clipboard.writeText(campaignPlanToText(entries));
-      toast({ title: "Plan copied", description: "Calendar schedule sent to clipboard." });
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: error instanceof Error ? error.message : "Clipboard not available.",
-        variant: "destructive",
-      });
-    } finally {
-      setCopying(false);
-    }
-  };
-
-  const handlePlannerChange = (field: keyof PlannerOptions, value: number | boolean) => {
+  const handlePlannerChange = React.useCallback((field: keyof PlannerOptions, value: number | boolean) => {
     setPlannerOptions((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   const columns = React.useMemo<ColumnDef<Campaign>[]>(
     () => [
