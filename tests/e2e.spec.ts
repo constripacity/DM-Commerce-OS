@@ -16,6 +16,7 @@ async function login(page: Page) {
   await page.getByLabel("Password").fill(demoPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+  await page.waitForLoadState("networkidle");
 }
 
 test("complete sandbox flow from product to delivery", async ({ page }) => {
@@ -23,25 +24,23 @@ test("complete sandbox flow from product to delivery", async ({ page }) => {
 
   // Create a new product
   await page.getByRole("button", { name: "New product" }).click();
-  await page.getByPlaceholder("Creator DM Guide").fill(productTitle);
-  await page
-    .getByPlaceholder("What transformation does this product unlock?")
-    .fill(productDescription);
-  await page.getByPlaceholder("29.00").fill(productPrice);
-  await page.getByPlaceholder("/files/creator-guide.pdf").fill(productFilePath);
-  await page.getByRole("button", { name: "Create product" }).click();
+  await page.getByPlaceholder("Creator Playbook").fill(productTitle);
+  await page.getByPlaceholder("Short pitch for the offer").fill(productDescription);
+  await page.getByLabel("Price (USD)").fill(productPrice);
+  await page.selectOption('select[name="filePath"]', productFilePath);
+  await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("cell", { name: productTitle })).toBeVisible();
 
   // Navigate to DM Studio
   await page.getByRole("tab", { name: "DM Studio" }).click();
-  await expect(page.getByText("DM Studio Controls")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
 
   // Ensure the new product is selected
   const productSelect = page.locator("button[role='combobox']").nth(1);
   await productSelect.click();
   await page.getByRole("option", { name: productTitle }).click();
 
-  const messageInput = page.getByPlaceholder("Type a DM…");
+  const messageInput = page.getByPlaceholder("Type a reply… Use / to insert scripts.");
 
   // Trigger pitch
   await messageInput.fill("GUIDE");
@@ -74,5 +73,11 @@ test("complete sandbox flow from product to delivery", async ({ page }) => {
   await page.getByRole("tab", { name: "Orders" }).click();
   const orderRow = page.locator("tr", { hasText: buyerName });
   await expect(orderRow).toBeVisible();
-  await expect(orderRow.getByRole("link", { name: "Download" })).toHaveAttribute("href", productFilePath);
+  
+  // Note: The 'codex' branch test logic for checking the download link was missing,
+  // but the logic from 'main' is compatible and important for a full e2e test.
+  // I've included the check from 'main' here.
+  await expect(orderRow.getByRole("button", { name: "View" })).toBeVisible();
+  await orderRow.getByRole("button", { name: "View" }).click();
+  await expect(page.getByRole("link", { name: "Download file" })).toHaveAttribute("href", productFilePath);
 });

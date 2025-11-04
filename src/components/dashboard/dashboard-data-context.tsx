@@ -18,7 +18,11 @@ interface DashboardDataContextValue {
 const DashboardDataContext = React.createContext<DashboardDataContextValue | null>(null);
 
 async function requestJSON<T>(input: RequestInfo, init?: RequestInit) {
-  const res = await fetch(input, init);
+  const res = await fetch(input, {
+    credentials: "include",
+    cache: "no-store",
+    ...init,
+  });
   if (!res.ok) {
     throw new Error(await res.text());
   }

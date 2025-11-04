@@ -1,0 +1,22 @@
+{
+  "ignorePaths": [
+    "node_modules/**",
+    ".next/**",
+    ".git/**",
+    "public/screenshots/**",
+    "prisma/dev.db",
+    "DM Commerce UI/**",
+    "old_ui_backup/**",
+    "scan-report.json"
+  ],
+  "allowEmails": ["demo@local.test"],
+  "treatAsBinary": [
+    "**/*.pdf",
+    "**/*.png",
+    "**/*.jpg",
+    "**/*.jpeg",
+    "**/*.webp"
+  ],
+  "expectedBinary": ["public/files/**"],
+  "maxFileBytes": 5242880
+}

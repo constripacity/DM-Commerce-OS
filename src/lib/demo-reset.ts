@@ -1,17 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import { runDemoSeed } from "../src/lib/demo-reset";
 import bcrypt from "bcrypt";
 import { addDays, subDays } from "date-fns";
 
-const prisma = new PrismaClient();
-
-async function main() {
-  console.log("🌱 Seeding DM Commerce OS demo data...");
-
-  // Run the centralized demo seed function (from codex branch)
-  await runDemoSeed(prisma);
-
-  // Extra fallback / local seed logic (from main branch)
+export async function runDemoSeed(prisma: PrismaClient) {
   const password = await bcrypt.hash("demo123", 12);
 
   await prisma.user.upsert({
@@ -23,23 +14,23 @@ async function main() {
     },
   });
 
+  const productPayloads = [
+    {
+      title: "Creator DM Guide",
+      description: "A step-by-step playbook for converting warm leads in the DMs without sounding salesy.",
+      priceCents: 2900,
+      filePath: "/files/creator-guide.pdf",
+    },
+    {
+      title: "Launch Checklist",
+      description: "A punchy pre-launch checklist covering content, DMs, and fulfillment so nothing slips through.",
+      priceCents: 1900,
+      filePath: "/files/checklist.pdf",
+    },
+  ];
+
   const products = await prisma.$transaction(
-    [
-      {
-        title: "Creator DM Guide",
-        description:
-          "A step-by-step playbook for converting warm leads in the DMs without sounding salesy.",
-        priceCents: 2900,
-        filePath: "/files/creator-guide.pdf",
-      },
-      {
-        title: "Launch Checklist",
-        description:
-          "A punchy pre-launch checklist covering content, DMs, and fulfillment so nothing slips through.",
-        priceCents: 1900,
-        filePath: "/files/checklist.pdf",
-      },
-    ].map((product) =>
+    productPayloads.map((product) =>
       prisma.product.upsert({
         where: { title: product.title },
         update: product,
@@ -48,22 +39,24 @@ async function main() {
     )
   );
 
-  const [guideProduct] = products;
+  const [guideProduct, checklistProduct] = products;
+
+  const now = new Date();
 
   await prisma.campaign.upsert({
     where: { keyword: "GUIDE" },
     update: {
       name: "Creator Guide DM Push",
       platform: "instagram",
-      startsOn: new Date(),
-      endsOn: addDays(new Date(), 14),
+      startsOn: now,
+      endsOn: addDays(now, 14),
     },
     create: {
       name: "Creator Guide DM Push",
       keyword: "GUIDE",
       platform: "instagram",
-      startsOn: new Date(),
-      endsOn: addDays(new Date(), 14),
+      startsOn: now,
+      endsOn: addDays(now, 14),
     },
   });
 
@@ -132,7 +125,6 @@ async function main() {
 
   await prisma.order.deleteMany();
 
-  const now = new Date();
   await prisma.order.createMany({
     data: [
       {
@@ -154,13 +146,13 @@ async function main() {
         createdAt: subDays(now, 3),
       },
       {
-        productId: products[1].id,
+        productId: checklistProduct.id,
         buyerName: "Morgan Ops",
         buyerEmail: "morgan@example.com",
         createdAt: subDays(now, 2),
       },
       {
-        productId: products[1].id,
+        productId: checklistProduct.id,
         buyerName: "Riley Sprint",
         buyerEmail: "riley@example.com",
         createdAt: subDays(now, 1),
@@ -173,15 +165,4 @@ async function main() {
       },
     ],
   });
-
-  console.log("✅ Demo data ready.");
 }
-
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });

@@ -1,22 +1,46 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuthCookie } from "@/lib/auth";
+import { campaignPlanToCsv, generateCampaignPlan } from "@/lib/campaigns";
 
-const angles = [
-  "Transformation",
-  "Quick Tip",
-  "Myth Busting",
-  "Checklist",
-];
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const angles = ["Transformation", "Quick Tip", "Myth Busting", "Checklist"];
 
 function dateToISO(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
 function escapeCsv(value: string) {
-  const needsQuotes = value.includes(",") || value.includes("\n") || value.includes('"');
+  const needsQuotes =
+    value.includes(",") || value.includes("\n") || value.includes('"');
   const escaped = value.replace(/"/g, '""');
   return needsQuotes ? `"${escaped}"` : escaped;
+}
+
+function generateHook(angle: string, keyword: string, type: "post" | "story") {
+  const callout = `DM ${keyword}`;
+  switch (angle) {
+    case "Transformation":
+      return type === "post"
+        ? `Before → after: how one creator flipped their DMs into revenue with a repeatable flow. ${callout} to steal the steps.`
+        : `Peep the DM makeover: a 3-message script that warms leads fast. ${callout} for the swipe copy.`;
+    case "Quick Tip":
+      return type === "post"
+        ? `3-line opener that gets warm leads to reply within minutes. Drop ${callout} and I'll DM the prompt.`
+        : `Story prompt: record a 15s clip sharing the “one line to revive cold leads.” ${callout} to get the full script.`;
+    case "Myth Busting":
+      return type === "post"
+        ? `Myth: you need a funnel to sell. Reality: a DM keyword does the heavy lifting. ${callout} to see the receipts.`
+        : `Story frame: “Thought DMs feel spammy? Try this permission-first line.” ${callout} for the copy + follow-ups.`;
+    case "Checklist":
+      return type === "post"
+        ? `Launch-day DM checklist: trigger keyword, qualify fast, deliver instantly. Save + DM ${callout} for the template.`
+        : `Story CTA: “DM ${keyword}” to get the 5-point checklist we run before any promo goes live.`;
+    default:
+      return `Fresh angle on your launch. ${callout} for the swipe copy.`;
+  }
 }
 
 function buildRows(keyword: string, startDate: Date) {
@@ -49,47 +73,51 @@ function buildRows(keyword: string, startDate: Date) {
   return rows;
 }
 
-function generateHook(angle: string, keyword: string, type: "post" | "story") {
-  const callout = `DM ${keyword}`;
-  switch (angle) {
-    case "Transformation":
-      return type === "post"
-        ? `Before → after: how one creator flipped their DMs into revenue with a repeatable flow. ${callout} to steal the steps.`
-        : `Peep the DM makeover: a 3-message script that warms leads fast. ${callout} for the swipe copy.`;
-    case "Quick Tip":
-      return type === "post"
-        ? `3-line opener that gets warm leads to reply within minutes. Drop ${callout} and I'll DM the prompt.`
-        : `Story prompt: record a 15s clip sharing the “one line to revive cold leads.” ${callout} to get the full script.`;
-    case "Myth Busting":
-      return type === "post"
-        ? `Myth: you need a funnel to sell. Reality: a DM keyword does the heavy lifting. ${callout} to see the receipts.`
-        : `Story frame: “Thought DMs feel spammy? Try this permission-first line.” ${callout} for the copy + follow-ups.`;
-    case "Checklist":
-      return type === "post"
-        ? `Launch-day DM checklist: trigger keyword, qualify fast, deliver instantly. Save + DM ${callout} for the template.`
-        : `Story CTA: “DM ${keyword}” to get the 5-point checklist we run before any promo goes live.`;
-    default:
-      return `Fresh angle on your launch. ${callout} for the swipe copy.`;
-  }
-}
-
 function toCsv(rows: string[][]) {
   return rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
 }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+function clampCount(value: string | null) {
+  if (!value) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) return undefined;
+  return Math.min(Math.max(parsed, 1), 30);
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   if (!requireAuthCookie(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const campaign = await prisma.campaign.findUnique({ where: { id: params.id } });
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: params.id },
+  });
   if (!campaign) {
     return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   }
 
+  const url = new URL(request.url);
+  const posts = clampCount(url.searchParams.get("posts"));
+  const stories = clampCount(url.searchParams.get("stories"));
+  const includeHashtags = url.searchParams.get("hashtags") === "1";
+
   const startDate = campaign.startsOn ?? new Date();
-  const rows = buildRows(campaign.keyword, startDate);
-  const csv = toCsv(rows);
+
+  // Prefer new campaign planner from codex branch
+  const plan = generateCampaignPlan({
+    keyword: campaign.keyword,
+    startDate,
+    posts,
+    stories,
+    includeHashtags,
+  });
+  const csv =
+    plan && Array.isArray(plan)
+      ? campaignPlanToCsv(plan)
+      : toCsv(buildRows(campaign.keyword, startDate));
 
   return new NextResponse(csv, {
     status: 200,
