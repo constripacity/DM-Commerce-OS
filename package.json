@@ -17,7 +17,12 @@
     "test:e2e:ui": "playwright test --ui",
     "scan:sensitive": "tsx scripts/scanSensitive.ts",
     "sanitize": "tsx scripts/sanitize.ts",
-    "prepush": "pnpm scan:sensitive"
+    "prepush": "pnpm scan:sensitive",
+    "oneclick": "tsx scripts/oneclick.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "reset:demo": "tsx scripts/reset-demo.ts",
+    "setup:win": "powershell -ExecutionPolicy Bypass -File ./scripts/bootstrap.ps1",
+    "setup:unix": "bash ./scripts/bootstrap.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
@@ -62,6 +67,7 @@
     "istextorbinary": "^7.0.1",
     "picomatch": "^4.0.2",
     "chalk": "^5.3.0",
+    "ora": "^8.0.1",
     "table": "^6.8.2",
     "postcss": "^8.4.35",
     "prisma": "^5.19.1",
