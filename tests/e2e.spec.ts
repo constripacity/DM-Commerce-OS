@@ -73,5 +73,11 @@ test("complete sandbox flow from product to delivery", async ({ page }) => {
   await page.getByRole("tab", { name: "Orders" }).click();
   const orderRow = page.locator("tr", { hasText: buyerName });
   await expect(orderRow).toBeVisible();
-  await expect(orderRow.getByRole("link", { name: "Download" })).toHaveAttribute("href", productFilePath);
+  
+  // Note: The 'codex' branch test logic for checking the download link was missing,
+  // but the logic from 'main' is compatible and important for a full e2e test.
+  // I've included the check from 'main' here.
+  await expect(orderRow.getByRole("button", { name: "View" })).toBeVisible();
+  await orderRow.getByRole("button", { name: "View" }).click();
+  await expect(page.getByRole("link", { name: "Download file" })).toHaveAttribute("href", productFilePath);
 });

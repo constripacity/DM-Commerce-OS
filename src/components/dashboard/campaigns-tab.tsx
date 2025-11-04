@@ -491,7 +491,7 @@ export function CampaignsTab() {
                 />
                 Hashtags
               </label>
-              <Button variant="outline" size="sm" onClick={copyPlan} disabled={!plan.length || copying} className="ml-auto">
+              <Button variant="outline" size="sm" onClick={() => copyPlan()} disabled={!plan.length || copying} className="ml-auto">
                 {copying ? (
                   <ClipboardCheck className="mr-2 h-3.5 w-3.5 animate-pulse" />
                 ) : (

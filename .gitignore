@@ -1,32 +1,37 @@
-# dependencies
+dependencies
+
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
+testing
+
 /coverage
 /playwright-report
 /test-results
 
-# production
+production
+
 /.next
 /out
 /build
 
-# misc
+misc
+
 .DS_Store
 .env*
 !.env.example
-*.log
+.log
 .prisma
 .sanitized-backup/
 scan-report.json
 .idea/
 .vscode/
 .turbo
-pnpm-debug.log*
+pnpm-debug.log
 
-# prisma
+prisma
+
 dev.db
 /dev.db-journal
 /prisma/dev.db

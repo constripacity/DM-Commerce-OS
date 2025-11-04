@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
+
 import { DashboardDataProvider } from "@/components/dashboard/dashboard-data-context";
 import { DashboardShell, type DashboardTabDefinition } from "@/components/dashboard/dashboard-shell";
 import { ProductsTab, type ProductCommandHandles } from "@/components/dashboard/products-tab";
@@ -74,11 +75,13 @@ export default function DashboardPage() {
   const { setOpen } = useCommandCenter();
   const { cycleTheme } = useThemeController();
   const [productCommands, setProductCommands] = React.useState<ProductCommandHandles | null>(null);
+
   const handleOpenCommand = React.useCallback(() => setOpen(true), [setOpen]);
   const focusSearch = React.useCallback(() => {
     searchRef.current?.focus();
   }, []);
 
+  // --- Command Palette Navigation ---
   const navigationActions = React.useMemo(
     () =>
       tabs.map((tab) => ({
@@ -92,6 +95,7 @@ export default function DashboardPage() {
     [setActiveTab]
   );
 
+  // --- Command Palette Utilities ---
   const utilityActions = React.useMemo(() => {
     const actions = [
       {
@@ -142,6 +146,7 @@ export default function DashboardPage() {
   useCommandActions(navigationActions);
   useCommandActions(utilityActions);
 
+  // --- Keyboard shortcut for search ---
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handler = (event: KeyboardEvent) => {

@@ -254,7 +254,7 @@ export function OrdersTab() {
           </Table>
         </div>
         {table.getPageCount() > 1 ? (
-          <div className="flex items-center justify-between pt-4 text-sm text-muted-foreground">
+          <div className.flex items-center justify-between pt-4 text-sm text-muted-foreground">
             <span>
               Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </span>

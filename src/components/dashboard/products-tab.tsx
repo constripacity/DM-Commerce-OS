@@ -350,7 +350,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         setSubmitting(false);
       }
     },
-    [editingProduct, setProducts, toast, productForm]
+    [editingProduct, setProducts, toast]
   );
 
   const submitCheckout = React.useCallback(
@@ -538,6 +538,8 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
     }
     setRowSelection({});
   }, [getSelectedProducts, handleDelete, setRowSelection]);
+
+  const selectedRows = table.getSelectedRowModel().rows;
 
   return (
     <section className="space-y-6">

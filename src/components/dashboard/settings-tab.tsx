@@ -402,4 +402,3 @@ function hexToRgb(hex: string) {
     bigint & 255,
   ];
 }
-
