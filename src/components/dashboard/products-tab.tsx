@@ -34,7 +34,8 @@ interface ProductsTabProps {
   onRegisterCommands?: (handles: ProductCommandHandles | null) => void;
 }
 
-type CheckoutFormValues = z.infer<typeof checkoutSchema.omit({ productId: true })>;
+const checkoutFormSchema = checkoutSchema.omit({ productId: true });
+type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 type ProductFormValues = {
   title: string;
   description: string;
@@ -90,7 +91,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
   });
 
   const checkoutForm = useForm<CheckoutFormValues>({
-    resolver: zodResolver(checkoutSchema.omit({ productId: true })),
+    resolver: zodResolver(checkoutFormSchema),
     defaultValues: { buyerEmail: "", buyerName: "" },
   });
 
