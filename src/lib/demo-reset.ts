@@ -1,13 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { addDays, subDays } from "date-fns";
 
 export async function runDemoSeed(prisma: PrismaClient) {
-  const password = await bcrypt.hash("demo123", 12);
+  const password = bcrypt.hashSync("demo123", 12);
 
   await prisma.user.upsert({
     where: { email: "demo@local.test" },
-    update: {},
+    update: { password },
     create: {
       email: "demo@local.test",
       password,

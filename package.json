@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "setup": "tsx scripts/setup.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -11,7 +12,6 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "demo:reset": "prisma migrate reset --force --skip-generate && prisma generate && tsx prisma/seed.ts",
     "test:install": "playwright install --with-deps",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -29,7 +29,7 @@
     "@radix-ui/react-scroll-area": "^1.0.5",
     "@tanstack/react-table": "^8.20.5",
     "cmdk": "^1.0.0",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^11.5.6",
@@ -52,11 +52,12 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-toast": "^1.1.4",
     "@radix-ui/react-select": "^2.0.0",
-    "@radix-ui/react-separator": "^1.0.3"
+    "@radix-ui/react-separator": "^1.0.3",
+    "@radix-ui/react-popover": "^1.0.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.46.1",
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",

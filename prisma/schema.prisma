@@ -16,7 +16,7 @@ model User {
 
 model Product {
   id          String   @id @default(cuid())
-  title       String
+  title       String   @unique
   description String
   priceCents  Int
   filePath    String
@@ -35,7 +35,7 @@ model Order {
 
 model Script {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   body      String
   category  String
   createdAt DateTime @default(now())
@@ -44,7 +44,7 @@ model Script {
 model Campaign {
   id        String   @id @default(cuid())
   name      String
-  keyword   String
+  keyword   String   @unique
   platform  String
   startsOn  DateTime
   endsOn    DateTime

@@ -32,7 +32,13 @@ export default function LoginPage() {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({ error: "Unable to login" }));
-      setError(data.error ?? "Unable to login");
+      if (res.status === 401) {
+        setError("Invalid email or password.");
+      } else if (res.status >= 500) {
+        setError("Login temporarily unavailable. Check server logs.");
+      } else {
+        setError(data.error ?? "Unable to login");
+      }
       setLoading(false);
       return;
     }
