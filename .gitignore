@@ -30,8 +30,6 @@ scan-report.json
 .turbo
 pnpm-debug.log
 
-prisma
-
 dev.db
 /dev.db-journal
 /prisma/dev.db
