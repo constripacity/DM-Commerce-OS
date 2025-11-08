@@ -19,7 +19,12 @@
     "scan:sensitive": "tsx scripts/scanSensitive.ts",
     "sanitize": "tsx scripts/sanitize.ts",
     "prepush": "pnpm run check:conflicts && pnpm scan:sensitive",
-    "postinstall": "simple-git-hooks"
+    "postinstall": "simple-git-hooks",
+    "oneclick": "tsx scripts/oneclick.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "reset:demo": "tsx scripts/reset-demo.ts",
+    "setup:win": "powershell -ExecutionPolicy Bypass -File ./scripts/bootstrap.ps1",
+    "setup:unix": "bash ./scripts/bootstrap.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
