@@ -14,32 +14,34 @@ DM Commerce OS is a self-contained Next.js application that demos how a creator 
 ## Tech Stack
 
 - **Web**: Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, lucide-react
-- **Server**: Next.js route handlers, Zod validation, bcrypt for the demo password
+- **Server**: Next.js route handlers, Zod validation, bcryptjs for the demo password
 - **Data**: Prisma ORM + SQLite (`prisma/dev.db`)
 - **Testing**: Playwright end-to-end suite
 
 ## Quickstart
 
+🚀 **First stop:** the [Beginner Install Kit](docs/BEGINNER-GUIDE.md) walks through the guided setup script, troubleshooting, and screenshots.
+
+### One-command install & launch
+
 ```bash
-# Install dependencies
-npm install
+# From the project folder
+pnpm run setup
+# or
+npm run setup
+```
 
-# Generate Prisma client & run migrations
-npx prisma migrate dev --name init
+Then start the dev server:
 
-# Seed demo data (user, products, campaigns, scripts, analytics orders)
-npm run db:seed
-
-# Run the dev server on http://localhost:3000
+```bash
+pnpm dev
+# or
 npm run dev
 ```
 
-Set an app secret for cookie signing:
+Visit `http://localhost:3000/login` and use the demo credentials below.
 
-```bash
-cp .env.example .env.local
-# Edit .env.local and set APP_SECRET to a random hex string
-```
+> 🔐 If you choose manual setup, copy `.env.example` to `.env.local`, set `APP_SECRET` to any long random string, and make sure `DATABASE_URL="file:./prisma/dev.db"` is present before running Prisma commands.
 
 ### Demo Credentials
 
@@ -62,17 +64,23 @@ cp .env.example .env.local
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start Next.js in development mode |
+| `npm run setup` / `pnpm run setup` | Guided install (env, deps, migrations, seed) |
+| `npm run dev` / `pnpm dev` | Start Next.js in development mode |
 | `npm run build` / `npm start` | Production build & start |
 | `npm run lint` | Run Next.js linting |
+| `npm run typecheck` | Run TypeScript without emitting files |
+| `npm run prisma:generate` | Generate the Prisma client |
+| `npm run prisma:migrate` | Run `prisma migrate dev` |
 | `npm run db:seed` | Execute `prisma/seed.ts` via `tsx` |
-| `npm run demo:reset` | Reset database, regenerate Prisma client, and reseed demo data |
 | `npm run test:install` | Install Playwright browser dependencies |
 | `npm run test:e2e` | Run the Playwright flow (spins up dev server automatically) |
+| `npm run test:e2e:ui` | Launch the Playwright test runner UI |
+| `npm run scan:sensitive` | Scan the repo for secrets before pushing |
+| `npm run sanitize` | Strip sensitive data from exported conversations |
 
 ## Testing
 
-Playwright global setup calls `npm run demo:reset` to guarantee a clean SQLite file. The main scenario covers:
+Playwright global setup resets the database with `prisma migrate reset --force --skip-generate` and then reruns `db:seed` to guarantee a clean SQLite file. The main scenario covers:
 
 1. Logging in with the demo account
 2. Creating a product
@@ -85,14 +93,14 @@ View or edit the test at [`tests/e2e.spec.ts`](tests/e2e.spec.ts).
 
 `prisma/seed.ts` provisions:
 
-- Demo user with bcrypt-hashed password (`demo123`)
+- Demo user with bcryptjs-hashed password (`demo123`)
 - Two products with local PDFs (`/public/files/creator-guide.pdf`, `/public/files/checklist.pdf`)
 - Six DM scripts spanning pitch, qualify, objections, checkout, and delivery
 - One campaign with keyword `GUIDE`
 - Settings row for brand defaults (`DM Commerce OS`, `#6366F1`)
 - Six historical orders to power analytics trend lines
 
-Run `npm run demo:reset` anytime to rebuild the SQLite database.
+Run `npx prisma migrate reset --force` followed by `npm run db:seed` (or the `pnpm` equivalents) anytime you want to rebuild the SQLite database.
 
 ## Screenshots to Capture
 

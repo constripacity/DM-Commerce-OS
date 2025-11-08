@@ -31,6 +31,7 @@ import { campaignPlanToText, generateCampaignPlan, type CampaignPlanEntry } from
 import { formatDate, toDateInputValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useCampaigns } from "@/hooks/useDashboardData";
 
 const platformOptions = [
   { value: "instagram", label: "Instagram" },
@@ -58,8 +59,9 @@ interface PlannerOptions {
 
 export function CampaignsTab() {
   const { toast } = useToast();
-  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { data: campaignsData, error: campaignsError, isLoading, mutate } = useCampaigns(true);
+  const campaigns = campaignsData ?? [];
+  const loading = !campaignsData && isLoading;
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [dialogMode, setDialogMode] = React.useState<"create" | "edit">("create");
   const [editingCampaign, setEditingCampaign] = React.useState<Campaign | null>(null);
@@ -82,31 +84,26 @@ export function CampaignsTab() {
     },
   });
 
-  React.useEffect(() => {
-    async function loadCampaigns() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/campaigns", { credentials: "include", cache: "no-store" });
-        if (!res.ok) throw new Error(await res.text());
-        const data = (await res.json()) as Campaign[];
-        setCampaigns(data);
-        setActiveCampaignId((current) => current ?? data[0]?.id ?? null);
-        if (data[0]) {
-          setViewDate(new Date(data[0].startsOn));
-        }
-      } catch (error) {
-        toast({
-          title: "Unable to load campaigns",
-          description: error instanceof Error ? error.message : "Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
+  const lastErrorToastRef = React.useRef(0);
 
-    loadCampaigns();
-  }, [toast]);
+  React.useEffect(() => {
+    if (!campaignsError) return;
+    const now = Date.now();
+    if (now - lastErrorToastRef.current < 10000) return;
+    lastErrorToastRef.current = now;
+    toast({
+      title: "Unable to load campaigns",
+      description: campaignsError instanceof Error ? campaignsError.message : "Please try again.",
+      variant: "destructive",
+    });
+  }, [campaignsError, toast]);
+
+  React.useEffect(() => {
+    if (!activeCampaignId && campaigns.length) {
+      setActiveCampaignId(campaigns[0].id);
+      setViewDate(new Date(campaigns[0].startsOn));
+    }
+  }, [activeCampaignId, campaigns]);
 
   const activeCampaign = campaigns.find((item) => item.id === activeCampaignId) ?? null;
 
@@ -202,10 +199,12 @@ export function CampaignsTab() {
           });
           if (!res.ok) throw new Error(await res.text());
           const updated = (await res.json()) as Campaign;
-          setCampaigns((prev) =>
-            prev
-              .map((item) => (item.id === updated.id ? updated : item))
-              .sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
+          await mutate(
+            (prev) =>
+              (prev ?? [])
+                .map((item) => (item.id === updated.id ? updated : item))
+                .sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime()),
+            { revalidate: false }
           );
           setActiveCampaignId(updated.id);
           toast({ title: "Campaign updated", description: `${updated.name} refreshed.` });
@@ -218,8 +217,12 @@ export function CampaignsTab() {
           });
           if (!res.ok) throw new Error(await res.text());
           const created = (await res.json()) as Campaign;
-          setCampaigns((prev) =>
-            [...prev, created].sort((a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime())
+          await mutate(
+            (prev) =>
+              [...(prev ?? []), created].sort(
+                (a, b) => new Date(a.startsOn).getTime() - new Date(b.startsOn).getTime()
+              ),
+            { revalidate: false }
           );
           setActiveCampaignId(created.id);
           toast({ title: "Campaign created", description: `${created.name} added.` });
@@ -235,7 +238,7 @@ export function CampaignsTab() {
         setSubmitting(false);
       }
     },
-    [dialogMode, editingCampaign, setActiveCampaignId, setCampaigns, toast]
+    [dialogMode, editingCampaign, mutate, setActiveCampaignId, toast]
   );
 
   const handleDelete = React.useCallback(
@@ -245,7 +248,7 @@ export function CampaignsTab() {
       try {
         const res = await fetch(`/api/campaigns/${campaign.id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(await res.text());
-        setCampaigns((prev) => prev.filter((item) => item.id !== campaign.id));
+        await mutate((prev) => prev?.filter((item) => item.id !== campaign.id) ?? [], { revalidate: false });
         if (activeCampaignId === campaign.id) {
           setActiveCampaignId(null);
         }
@@ -258,7 +261,7 @@ export function CampaignsTab() {
         });
       }
     },
-    [activeCampaignId, setActiveCampaignId, setCampaigns, toast]
+    [activeCampaignId, mutate, setActiveCampaignId, toast]
   );
 
   const openExport = React.useCallback(
