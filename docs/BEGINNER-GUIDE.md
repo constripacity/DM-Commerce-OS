@@ -1,6 +1,7 @@
 # DM-Commerce-OS Beginner Install Kit
 
 ## Quick 3-Step Setup (Recommended)
+
 1. **Get the code:** Clone with Git (`git clone https://github.com/constripacity/DM-Commerce-OS.git`) or download the ZIP and extract it.
 2. **From the project folder:**
 
@@ -67,52 +68,68 @@ npm run setup
 ## Option B — Manual Install
 
 1. **Get the code:** Clone or download the ZIP and extract it.
-2. **Install dependencies:**  
+2. **Install dependencies:**
+
    ```bash
    pnpm install
    # or
    npm install
    ```
-3. **Create your env file:**  
+
+3. **Create your env file:**
+
    ```bash
    cp .env.example .env.local
    ```
+
    Edit `.env.local` so that it contains:
+
    ```env
    APP_SECRET=<any long random string>
    DATABASE_URL="file:./prisma/dev.db"
    ```
-4. **Generate Prisma client:**  
+
+4. **Generate Prisma client:**
+
    ```bash
    pnpm prisma generate
    # or
    npm run prisma:generate
    ```
-5. **Run migrations:**  
+
+5. **Run migrations:**
+
    ```bash
    pnpm prisma migrate dev --name init
    # or
    npm run prisma:migrate -- --name init
    ```
+
    If the migration already exists, run:
+
    ```bash
    pnpm prisma migrate deploy
    # or
    npm run prisma:migrate deploy
    ```
-6. **Seed demo data:**  
+
+6. **Seed demo data:**
+
    ```bash
    pnpm db:seed
    # or
    npm run db:seed
    ```
-7. **Start the dev server:**  
+
+7. **Start the dev server:**
+
    ```bash
    pnpm dev
    # or
    npm run dev
    ```
-8. **Log in:** Email `demo@local.test / demo123`.
+
+8. **Log in:** Email `demo@local.test` / password `demo123`.
 
 ---
 
@@ -127,25 +144,27 @@ npm run setup
 ## Common errors & quick fixes
 
 | Symptom                         | Quick fix                                                                                                                |
-|----------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| **Node version is too old**      | Install Node.js 18+ from [nodejs.org](https://nodejs.org/), reopen your terminal, then rerun the setup command.          |
-| **PowerShell blocked the script**| Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` in PowerShell and retry.                         |
-| **pnpm not installed**           | The script falls back to npm automatically. For pnpm, install via `corepack enable pnpm` or `npm install -g pnpm`.       |
-| **.env.local missing or blank**  | Re-run `pnpm run setup` (or copy `.env.example` manually) to regenerate `.env.local` with `APP_SECRET` and `DATABASE_URL`.|
-| **Port 3000 already in use**     | Stop other dev servers or run `PORT=3001 pnpm dev` (or `npm run dev -- --port 3001`) and use the printed URL.            |
-| **Prisma migrate errors**        | Delete `prisma/dev.db`, rerun `pnpm run setup`, or run `pnpm prisma migrate reset --force` followed by `pnpm db:seed`.   |
-| **Playwright dependency errors** | These relate to optional end-to-end tests. Skip for now or run `pnpm run test:install` later if you need them.           |
-| **OpenSSL missing**              | The setup falls back to Node’s `crypto.randomBytes`. Install OpenSSL if you want command-line secret generation.          |
+|---------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| **Node version is too old**     | Install Node.js 18+ from [nodejs.org](https://nodejs.org/), reopen your terminal, then rerun the setup command.          |
+| **PowerShell blocked the script** | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` in PowerShell and retry.                         |
+| **pnpm not installed**          | The script falls back to npm automatically. For pnpm, install via `corepack enable pnpm` or `npm install -g pnpm`.       |
+| **.env.local missing or blank** | Re-run `pnpm run setup` (or copy `.env.example` manually) to regenerate `.env.local` with `APP_SECRET` and `DATABASE_URL`.|
+| **Port 3000 already in use**    | Stop other dev servers or run `PORT=3001 pnpm dev` (or `npm run dev -- --port 3001`) and use the printed URL.            |
+| **Prisma migrate errors**       | Delete `prisma/dev.db`, rerun `pnpm run setup`, or run `pnpm prisma migrate reset --force` followed by `pnpm db:seed`.   |
+| **Playwright dependency errors**| These relate to optional end-to-end tests. Skip for now or run `pnpm run test:install` later if you need them.           |
+| **OpenSSL missing**             | The setup falls back to Node’s `crypto.randomBytes`. Install OpenSSL if you want command-line secret generation.          |
 
 ---
 
 ## Reset / Uninstall
 
-- **Reset demo data:**  
+- **Reset demo data:**
+
   ```bash
   pnpm prisma migrate reset --force
   pnpm db:seed
   ```
+
   (For npm use `npm exec prisma migrate reset -- --force` and then `npm run db:seed`.)
 
 - **Full cleanup:** Delete `node_modules/` and `prisma/dev.db`, then rerun Option A to reinstall.
@@ -172,7 +191,7 @@ Yes. Extract the ZIP, open the folder in PowerShell/Terminal, and run the same c
 They live in the `public/files` folder so the fake checkout can deliver them instantly.
 
 **Can I rerun the setup command?**  
-Absolutely. The script is idempotent—it will reuse existing installs and only fix what’s missing.
+Absolutely. The script is idempotent — it will reuse existing installs and only fix what’s missing.
 
 **How do I stop the dev server?**  
 Press `Ctrl+C` in the terminal that's running `pnpm dev` / `npm run dev`.

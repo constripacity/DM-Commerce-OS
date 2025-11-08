@@ -12,12 +12,14 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "check:conflicts": "tsx scripts/check-merge-conflicts.ts",
     "test:install": "playwright install --with-deps",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "scan:sensitive": "tsx scripts/scanSensitive.ts",
     "sanitize": "tsx scripts/sanitize.ts",
-    "prepush": "pnpm scan:sensitive",
+    "prepush": "pnpm run check:conflicts && pnpm scan:sensitive",
+    "postinstall": "simple-git-hooks",
     "oneclick": "tsx scripts/oneclick.ts",
     "doctor": "tsx scripts/doctor.ts",
     "reset:demo": "tsx scripts/reset-demo.ts",
@@ -42,6 +44,7 @@
     "rehype-sanitize": "^6.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "swr": "^2.2.5",
     "zod": "^3.23.8",
     "class-variance-authority": "^0.7.0",
     "tailwind-merge": "^2.3.0",
@@ -75,6 +78,11 @@
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "simple-git-hooks": "^2.9.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm run check:conflicts",
+    "pre-push": "pnpm run check:conflicts && pnpm scan:sensitive"
   }
 }

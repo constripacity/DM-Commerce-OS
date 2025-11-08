@@ -7,12 +7,18 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useThemeController, palettes } from "@/components/dashboard/theme-provider";
 import { cn } from "@/lib/utils";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 export function ThemeToggle() {
+  const mounted = useIsMounted();
   const { theme, setTheme, cycleTheme } = useThemeController();
   const [open, setOpen] = React.useState(false);
 
   const selected = palettes.find((palette) => palette.id === theme) ?? palettes[0];
+
+  if (!mounted) {
+    return <div className="h-9 w-[94px] rounded-md bg-muted" />;
+  }
 
   return (
     <div className="flex items-center gap-2">

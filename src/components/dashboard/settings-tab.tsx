@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { settingSchema } from "@/lib/validators";
 import { ThemeId, palettes, useThemeController } from "@/components/dashboard/theme-provider";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/useDashboardData";
 
 const formSchema = settingSchema.extend({
   logoPath: settingSchema.shape.logoPath.default(null),
@@ -23,18 +24,10 @@ const formSchema = settingSchema.extend({
 
 type SettingsFormValues = z.infer<typeof formSchema>;
 
-const fetchSettings = async () => {
-  const response = await fetch("/api/settings", { credentials: "include", cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-  return (await response.json()) as Setting;
-};
-
 export function SettingsTab() {
   const { toast } = useToast();
   const { theme, setTheme } = useThemeController();
-  const [loading, setLoading] = React.useState(true);
+  const { data: settingsData, error: settingsError, isLoading, mutate } = useSettings(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [logoFile, setLogoFile] = React.useState<File | null>(null);
@@ -60,31 +53,30 @@ export function SettingsTab() {
   const contrastRatio = getContrastRatio(watchedColor, backgroundColor);
   const passesContrast = contrastRatio >= 4.5;
 
-  React.useEffect(() => {
-    async function loadSettings() {
-      try {
-        setLoading(true);
-        const data = await fetchSettings();
-        form.reset({
-          brandName: data.brandName,
-          primaryHex: data.primaryHex,
-          logoPath: data.logoPath ?? null,
-        });
-        setPreviewUrl(data.logoPath ?? null);
-        setRemoveLogo(false);
-      } catch (error) {
-        toast({
-          title: "Unable to load settings",
-          description: error instanceof Error ? error.message : "Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
+  const lastErrorToastRef = React.useRef(0);
 
-    loadSettings();
-  }, [form, toast]);
+  React.useEffect(() => {
+    if (!settingsData) return;
+    form.reset({
+      brandName: settingsData.brandName,
+      primaryHex: settingsData.primaryHex,
+      logoPath: settingsData.logoPath ?? null,
+    });
+    setPreviewUrl(settingsData.logoPath ?? null);
+    setRemoveLogo(false);
+  }, [form, settingsData]);
+
+  React.useEffect(() => {
+    if (!settingsError) return;
+    const now = Date.now();
+    if (now - lastErrorToastRef.current < 10000) return;
+    lastErrorToastRef.current = now;
+    toast({
+      title: "Unable to load settings",
+      description: settingsError instanceof Error ? settingsError.message : "Please try again.",
+      variant: "destructive",
+    });
+  }, [settingsError, toast]);
 
   React.useEffect(() => {
     if (!logoFile) {
@@ -147,6 +139,7 @@ export function SettingsTab() {
       setPreviewUrl(updated.logoPath ?? null);
       setLogoFile(null);
       setRemoveLogo(!updated.logoPath);
+      await mutate(updated, { revalidate: false });
       toast({ title: "Settings saved", description: "Brand preferences updated." });
     } catch (error) {
       toast({
@@ -182,7 +175,7 @@ export function SettingsTab() {
     }
   };
 
-  if (loading) {
+  if (!settingsData && isLoading) {
     return (
       <Card className="max-w-3xl">
         <CardHeader>

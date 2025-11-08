@@ -13,16 +13,18 @@ DM Commerce OS is a self-contained Next.js application that demos how a creator 
 
 ## Tech Stack
 
-- **Web**: Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, lucide-react
-- **Server**: Next.js route handlers, Zod validation, bcryptjs for the demo password
-- **Data**: Prisma ORM + SQLite (`prisma/dev.db`)
-- **Testing**: Playwright end-to-end suite
+- **Web:** Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, lucide-react  
+- **Server:** Next.js route handlers, Zod validation, bcryptjs for the demo password  
+- **Data:** Prisma ORM + SQLite (`prisma/dev.db`)  
+- **Testing:** Playwright end-to-end suite
 
-## 🚀 First stop: the [Beginner Install Kit](docs/BEGINNER-GUIDE.md) walks through the guided setup script, troubleshooting, and screenshots.
+## Beginner Install Kit
+
+See docs/BEGINNER-GUIDE.md for a guided setup script, troubleshooting, and screenshots. The one-command guided install (recommended) runs env setup, installs dependencies, applies migrations and seeds the demo data.
 
 ### One-command install & launch
 
-```
+```bash
 # From the project folder
 pnpm run setup
 # or
@@ -31,55 +33,62 @@ npm run setup
 
 Then start the dev server:
 
-```
+```bash
 pnpm dev
 # or
 npm run dev
 ```
 
-Visit `http://localhost:3000/login` and use the demo credentials below.
+Visit http://localhost:3000/login and use the demo credentials below.
 
 > 🔐 If you choose manual setup, copy `.env.example` to `.env.local`, set `APP_SECRET` to any long random string, and make sure `DATABASE_URL="file:./prisma/dev.db"` is present before running Prisma commands.
 
 ### Demo Credentials
 
-- **Email:** demo@local.test
+- **Email:** demo@local.test  
 - **Password:** demo123
 
 ## Key Features
 
-| Area         | Highlights |
-| ------------ | ---------- |
-| Products     | CRUD with Zod validation, price helper, toast feedback, and simulated checkout modal |
-| Orders       | Filterable table with date bounds and instant download link pointing to `/public/files/*.pdf` |
-| DM Studio    | Campaign/product selectors, script previews with variables, state-machine auto replies, checkout modal, and delivery follow-up |
-| Campaigns    | CRUD + CSV export (10 posts & 10 stories) covering transformation, quick tips, myths, and checklists |
-| Scripts Library | Categorised templates with variable chips ({{product}}, {{price}}, {{keyword}}) and live preview |
-| Analytics    | Seeded funnel metrics plus live order totals, sparkline SVG chart, and pipeline summary |
-| Settings     | Brand name + color editor and local logo upload saved to `/public/uploads` |
+| Area            | Highlights |
+| --------------- | ---------- |
+| Products        | CRUD with Zod validation, price helper, toast feedback, and simulated checkout modal |
+| Orders          | Filterable table with date bounds and instant download link pointing to `/public/files/*.pdf` |
+| DM Studio       | Campaign/product selectors, script previews with variables, state-machine auto replies, checkout modal, and delivery follow-up |
+| Campaigns       | CRUD + CSV export (10 posts & 10 stories) covering transformations, quick tips, myths, and checklists |
+| Scripts Library | Categorized templates with variable chips ({{product}}, {{price}}, {{keyword}}) and live preview |
+| Analytics       | Seeded funnel metrics plus live order totals, sparkline SVG chart, and pipeline summary |
+| Settings        | Brand name + color editor and local logo upload saved to `/public/uploads` |
 
 ## Available Scripts
 
-| Command                        | Description                                   |
-| ------------------------------ | --------------------------------------------- |
-| `npm run setup` / `pnpm run setup`      | Guided install (env, deps, migrations, seed)   |
-| `npm run dev` / `pnpm dev`              | Start Next.js in development mode              |
-| `npm run build` / `npm start`           | Production build & start                       |
-| `npm run lint`                         | Run Next.js linting                            |
-| `npm run typecheck`                    | Run TypeScript without emitting files           |
-| `npm run prisma:generate`               | Generate the Prisma client                      |
-| `npm run prisma:migrate`                | Run `prisma migrate dev`                        |
-| `npm run db:seed`                       | Execute `prisma/seed.ts` via `tsx`              |
-| `npm run test:install`                   | Install Playwright browser dependencies         |
-| `npm run test:e2e`                       | Run the Playwright flow (spins up dev server automatically) |
-| `npm run test:e2e:ui`                    | Launch the Playwright test runner UI            |
-| `npm run scan:sensitive`                 | Scan the repo for secrets before pushing        |
-| `npm run sanitize`                       | Strip sensitive data from exported conversations|
+| Command                        | Description                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `npm run setup` / `pnpm run setup` | Guided install (env, deps, migrations, seed)                                |
+| `npm run dev` / `pnpm dev`          | Start Next.js in development mode                                           |
+| `npm run build` / `npm start`       | Production build & start                                                    |
+| `npm run lint`                      | Run Next.js linting                                                         |
+| `npm run typecheck`                 | Run TypeScript without emitting files                                       |
+| `npm run prisma:generate`           | Generate the Prisma client                                                  |
+| `npm run prisma:migrate`            | Run `prisma migrate dev`                                                    |
+| `npm run db:seed`                   | Execute `prisma/seed.ts` via `tsx`                                          |
+| `npm run test:install`              | Install Playwright browser dependencies                                     |
+| `npm run test:e2e`                  | Run the Playwright flow (spins up dev server automatically)                 |
+| `npm run test:e2e:ui`               | Launch the Playwright test runner UI                                        |
+| `npm run scan:sensitive`            | Scan the repo for secrets before pushing                                    |
+| `npm run sanitize`                  | Strip sensitive data from exported conversations                            |
 
 ## Testing
 
-Playwright global setup resets the database with `prisma migrate reset --force --skip-generate` and then reruns `db:seed` to guarantee a clean SQLite file. The main scenario covers:
+Playwright global setup resets the database with:
 
+```bash
+npx prisma migrate reset --force --skip-generate
+# then
+pnpm db:seed
+```
+
+The main e2e scenario covers:
 - Logging in with the demo account
 - Creating a product
 - Running the DM Studio flow (keyword → qualify → checkout → delivery)
@@ -90,7 +99,6 @@ View or edit the test at `tests/e2e.spec.ts`.
 ## Data & Seeds
 
 `prisma/seed.ts` provisions:
-
 - Demo user with bcryptjs-hashed password (`demo123`)
 - Two products with local PDFs (`/public/files/creator-guide.pdf`, `/public/files/checklist.pdf`)
 - Six DM scripts spanning pitch, qualify, objections, checkout, and delivery
@@ -103,7 +111,6 @@ Run `npx prisma migrate reset --force` followed by `npm run db:seed` (or the `pn
 ## Screenshots to Capture
 
 Place exported images in `/public/screenshots/`:
-
 - login.png
 - dashboard.png
 - products.png
@@ -114,15 +121,15 @@ Place exported images in `/public/screenshots/`:
 
 ## Loom Script
 
-A 90-second narration script lives in [docs/loom-script.md](docs/loom-script.md).
+A 90-second narration script lives in `docs/loom-script.md`.
 
 ## What’s Simulated vs Real
 
-| Real                                                                          | Simulated                   |
-| ----------------------------------------------------------------------------- | --------------------------- |
-| Authenticated session via signed HTTP-only cookie                             | Payments, email delivery, social DM APIs |
-| File delivery via local `/public/files/*`                                     | External storage or CDN     |
-| Prisma-backed persistence                                                     | Any third-party analytics or webhook integrations |
+| Real                                                       | Simulated                                   |
+|------------------------------------------------------------|---------------------------------------------|
+| Authenticated session via signed HTTP-only cookie          | Payments, email delivery, social DM APIs    |
+| File delivery via local `/public/files/*`                  | External storage or CDN                      |
+| Prisma-backed persistence                                  | Any third-party analytics or webhook integrations |
 
 ## What I Learned
 

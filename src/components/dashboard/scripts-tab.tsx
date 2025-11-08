@@ -32,6 +32,7 @@ import { scriptSchema } from "@/lib/validators";
 import { fillTemplate } from "@/lib/stateMachines/dmFlow";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
+import { useScripts } from "@/hooks/useDashboardData";
 
 const categories = [
   { value: "pitch", label: "Pitch" },
@@ -56,8 +57,9 @@ const historyStorageKey = "dm-commerce-script-history";
 
 export function ScriptsTab() {
   const { toast } = useToast();
-  const [scripts, setScripts] = React.useState<Script[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { data: scriptsData, error: scriptsError, isLoading, mutate } = useScripts(true);
+  const scripts = scriptsData ?? [];
+  const loading = !scriptsData && isLoading;
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editingScript, setEditingScript] = React.useState<Script | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -93,28 +95,19 @@ export function ScriptsTab() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(historyStorageKey, JSON.stringify(historyMap));
   }, [historyMap]);
+  const lastErrorToastRef = React.useRef(0);
 
   React.useEffect(() => {
-    async function loadScripts() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/scripts", { credentials: "include", cache: "no-store" });
-        if (!res.ok) throw new Error(await res.text());
-        const data = (await res.json()) as Script[];
-        setScripts(data);
-      } catch (error) {
-        toast({
-          title: "Unable to load scripts",
-          description: error instanceof Error ? error.message : "Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadScripts();
-  }, [toast]);
+    if (!scriptsError) return;
+    const now = Date.now();
+    if (now - lastErrorToastRef.current < 10000) return;
+    lastErrorToastRef.current = now;
+    toast({
+      title: "Unable to load scripts",
+      description: scriptsError instanceof Error ? scriptsError.message : "Please try again.",
+      variant: "destructive",
+    });
+  }, [scriptsError, toast]);
 
   const openCreateDrawer = React.useCallback(() => {
     setEditingScript(null);
@@ -199,7 +192,9 @@ export function ScriptsTab() {
           });
           if (!res.ok) throw new Error(await res.text());
           const updated = (await res.json()) as Script;
-          setScripts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+          await mutate((prev) => prev?.map((item) => (item.id === updated.id ? updated : item)) ?? [updated], {
+            revalidate: false,
+          });
           toast({ title: "Script updated", description: `${updated.name} saved.` });
         } else {
           const res = await fetch("/api/scripts", {
@@ -210,7 +205,7 @@ export function ScriptsTab() {
           });
           if (!res.ok) throw new Error(await res.text());
           const created = (await res.json()) as Script;
-          setScripts((prev) => [created, ...prev]);
+          await mutate((prev) => (prev ? [created, ...prev] : [created]), { revalidate: false });
           toast({ title: "Script created", description: `${created.name} added.` });
         }
         setDrawerOpen(false);
@@ -224,7 +219,7 @@ export function ScriptsTab() {
         setSubmitting(false);
       }
     },
-    [editingScript, pushHistory, setDrawerOpen, setScripts, toast]
+    [editingScript, mutate, pushHistory, setDrawerOpen, toast]
   );
 
   const handleDelete = React.useCallback(
@@ -234,7 +229,7 @@ export function ScriptsTab() {
       try {
         const res = await fetch(`/api/scripts/${script.id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(await res.text());
-        setScripts((prev) => prev.filter((item) => item.id !== script.id));
+        await mutate((prev) => prev?.filter((item) => item.id !== script.id) ?? [], { revalidate: false });
         toast({ title: "Script removed", description: `${script.name} deleted.` });
       } catch (error) {
         toast({
@@ -244,7 +239,7 @@ export function ScriptsTab() {
         });
       }
     },
-    [setScripts, toast]
+    [mutate, toast]
   );
 
   const restoreRevision = React.useCallback(
