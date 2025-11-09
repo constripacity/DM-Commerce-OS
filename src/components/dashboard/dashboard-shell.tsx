@@ -59,7 +59,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 Manage DM flows, offers, analytics and delivery without leaving your local sandbox.
               </p>
             </div>
-            <CommandKButton />
+
+            <div className="flex items-center justify-between">
+              <CommandKButton />
+              <div className="text-xs text-slate-300">Demo</div>
+            </div>
+
             <nav className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -83,7 +88,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 );
               })}
             </nav>
+
+            <div className="mt-auto text-xs text-slate-300">
+              <p className="mb-2">Quick reset:</p>
+              <code className="block rounded bg-white/5 px-2 py-1 text-[11px]">pnpm prisma migrate reset --force</code>
+              <code className="mt-1 block rounded bg-white/5 px-2 py-1 text-[11px]">pnpm db:seed</code>
+            </div>
           </aside>
+
           <main className="flex-1">
             <div className="min-h-[calc(100vh-5rem)] rounded-3xl border border-white/10 bg-slate-950/60 p-6 shadow-[0_0_80px_rgba(15,23,42,0.4)] backdrop-blur">
               {children}

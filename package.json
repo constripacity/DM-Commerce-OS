@@ -19,7 +19,12 @@
     "scan:sensitive": "tsx scripts/scanSensitive.ts",
     "sanitize": "tsx scripts/sanitize.ts",
     "prepush": "pnpm run check:conflicts && pnpm scan:sensitive",
-    "postinstall": "simple-git-hooks"
+    "postinstall": "simple-git-hooks",
+    "oneclick": "tsx scripts/oneclick.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "reset:demo": "tsx scripts/reset-demo.ts",
+    "setup:win": "powershell -ExecutionPolicy Bypass -File ./scripts/bootstrap.ps1",
+    "setup:unix": "bash ./scripts/bootstrap.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
@@ -59,7 +64,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
+    "@types.react-dom": "^18.3.0",
     "autoprefixer": "^10.4.18",
     "eslint": "^9.9.1",
     "eslint-config-next": "^14.2.5",
