@@ -30,7 +30,7 @@ const navItems = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings2 },
 ];
 
-export function DashboardAppShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -94,3 +94,5 @@ export function DashboardAppShell({ children }: { children: React.ReactNode }) {
     </DashboardDataProvider>
   );
 }
+
+export default DashboardShell;

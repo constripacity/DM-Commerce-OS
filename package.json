@@ -51,7 +51,8 @@
     "@radix-ui/react-toast": "^1.1.4",
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-separator": "^1.0.3",
-    "@radix-ui/react-popover": "^1.0.7"
+    "@radix-ui/react-popover": "^1.0.7",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.46.1",
@@ -63,7 +64,7 @@
     "eslint": "^9.9.1",
     "eslint-config-next": "^14.2.5",
     "fast-glob": "^3.3.2",
-    "istextorbinary": "^7.0.1",
+    "istextorbinary": "^9.5.0",
     "picomatch": "^4.0.2",
     "chalk": "^5.3.0",
     "ora": "^8.0.1",

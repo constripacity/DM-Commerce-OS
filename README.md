@@ -22,26 +22,51 @@ DM Commerce OS is a self-contained Next.js application that demos how a creator 
 
 🚀 **First stop:** the [Beginner Install Kit](docs/BEGINNER-GUIDE.md) walks through the guided setup script, troubleshooting, and screenshots.
 
-### One-command install & launch
+### Quick 3-step launch
+
+1. **Provision everything:**
+
+   ```bash
+   pnpm run setup
+   # or
+   npm run setup
+   ```
+
+2. **Start the dev server:**
+
+   ```bash
+   pnpm dev
+   # or
+   npm run dev
+   ```
+
+3. **Explore the sandbox:** Visit `http://localhost:3000/login` and sign in with the demo credentials below.
+
+> 🔐 Prefer to wire things up manually? Copy `.env.example` to `.env.local`, set `APP_SECRET` to any long random string, and make sure `DATABASE_URL="file:./prisma/dev.db"` is present before running Prisma commands.
+
+### Manual install (if you prefer step-by-step)
 
 ```bash
-# From the project folder
-pnpm run setup
+# Install dependencies
+pnpm install
 # or
-npm run setup
-```
+npm install
 
-Then start the dev server:
+# Prepare environment
+cp .env.example .env.local
 
-```bash
+# Generate client & apply migrations
+pnpm prisma generate
+pnpm prisma migrate dev --name init
+
+# Seed demo data
+pnpm db:seed
+
+# Run the app
 pnpm dev
-# or
-npm run dev
 ```
 
-Visit `http://localhost:3000/login` and use the demo credentials below.
-
-> 🔐 If you choose manual setup, copy `.env.example` to `.env.local`, set `APP_SECRET` to any long random string, and make sure `DATABASE_URL="file:./prisma/dev.db"` is present before running Prisma commands.
+Replace `pnpm` with `npm run`/`npm exec` equivalents if you do not have pnpm installed.
 
 ### Demo Credentials
 

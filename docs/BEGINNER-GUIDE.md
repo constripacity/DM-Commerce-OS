@@ -27,6 +27,8 @@ DM-Commerce-OS is a local playground that shows the full "DM to checkout" funnel
 - **Requirements:** Node.js 18 or newer, internet access, and room for Node dependencies.
 - **Optional:** Git. Downloading and extracting the ZIP works exactly the same.
 
+> ✅ **Package manager tip:** If you do not have pnpm installed, the setup script automatically falls back to npm. You can also run `corepack enable pnpm` to make pnpm available globally.
+
 > 💡 On Windows use **PowerShell**. On macOS/Linux use **Terminal**.
 
 ## Option A — Guided Setup (Recommended)
