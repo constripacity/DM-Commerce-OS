@@ -1,189 +1,178 @@
 "use client";
+import { format } from "date-fns";
+import { Activity, Rocket, Sparkles, Target } from "lucide-react";
 
-import * as React from "react";
-import {
-  Box,
-  Bot,
-  ChartLine,
-  Megaphone,
-  ScrollText,
-  Settings as SettingsIcon,
-  ShoppingBag,
-  Sparkles,
-} from "lucide-react";
+import { useDashboardData } from "@/components/dashboard/dashboard-data-context";
+import { useCampaigns, useScripts } from "@/hooks/useDashboardData";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-import { DashboardDataProvider } from "@/components/dashboard/dashboard-data-context";
-import { DashboardShell, type DashboardTabDefinition } from "@/components/dashboard/dashboard-shell";
-import { ProductsTab, type ProductCommandHandles } from "@/components/dashboard/products-tab";
-import { DMStudioTab } from "@/components/dashboard/dm-studio-tab";
-import { CampaignsTab } from "@/components/dashboard/campaigns-tab";
-import { OrdersTab } from "@/components/dashboard/orders-tab";
-import { ScriptsTab } from "@/components/dashboard/scripts-tab";
-import { AnalyticsTab } from "@/components/dashboard/analytics-tab";
-import { SettingsTab } from "@/components/dashboard/settings-tab";
-import { useCommandActions, useCommandCenter } from "@/components/command-palette";
-import { useThemeController } from "@/components/dashboard/theme-provider";
-
-const tabs: DashboardTabDefinition[] = [
-  {
-    value: "products",
-    label: "Products",
-    description: "Offers, price tests, delivery files",
-    icon: Box,
-  },
-  {
-    value: "dm-studio",
-    label: "DM Studio",
-    description: "Simulate replies & flows",
-    icon: Bot,
-  },
-  {
-    value: "campaigns",
-    label: "Campaigns",
-    description: "Calendar, export-ready posts",
-    icon: Megaphone,
-  },
-  {
-    value: "orders",
-    label: "Orders",
-    description: "Checkout log & fulfillment",
-    icon: ShoppingBag,
-  },
-  {
-    value: "scripts",
-    label: "Scripts",
-    description: "Templates & versions",
-    icon: ScrollText,
-  },
-  {
-    value: "analytics",
-    label: "Analytics",
-    description: "Funnel & revenue pulse",
-    icon: ChartLine,
-  },
-  {
-    value: "settings",
-    label: "Settings",
-    description: "Brand theme & resets",
-    icon: SettingsIcon,
-  },
-];
-
-export default function DashboardPage() {
-  const [activeTab, setActiveTab] = React.useState<string>("products");
-  const searchRef = React.useRef<HTMLInputElement>(null);
-  const { setOpen } = useCommandCenter();
-  const { cycleTheme } = useThemeController();
-  const [productCommands, setProductCommands] = React.useState<ProductCommandHandles | null>(null);
-
-  const handleOpenCommand = React.useCallback(() => setOpen(true), [setOpen]);
-  const focusSearch = React.useCallback(() => {
-    searchRef.current?.focus();
-  }, []);
-
-  // --- Command Palette Navigation ---
-  const navigationActions = React.useMemo(
-    () =>
-      tabs.map((tab) => ({
-        id: `nav-${tab.value}`,
-        label: `Go to ${tab.label}`,
-        section: "Navigate",
-        keywords: [tab.label, tab.description],
-        icon: React.createElement(tab.icon, { className: "h-4 w-4" }),
-        run: () => setActiveTab(tab.value),
-      })),
-    [setActiveTab]
+function StatCard({ label, value, description, icon: Icon }: { label: string; value: string; description: string; icon: any }) {
+  return (
+    <Card className="border-white/10 bg-white/5 text-slate-100 shadow-[0_10px_50px_rgba(15,23,42,0.35)] backdrop-blur">
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.32em] text-slate-400">{label}</p>
+          <CardTitle className="text-3xl font-semibold text-white">{value}</CardTitle>
+        </div>
+        <div className="rounded-full border border-white/20 bg-white/10 p-3 text-white">
+          <Icon className="h-5 w-5" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-slate-300">{description}</p>
+      </CardContent>
+    </Card>
   );
+}
 
-  // --- Command Palette Utilities ---
-  const utilityActions = React.useMemo(() => {
-    const actions = [
-      {
-        id: "focus-search",
-        label: "Focus dashboard search",
-        section: "Global",
-        shortcut: ["/"],
-        icon: <Sparkles className="h-4 w-4" />,
-        run: focusSearch,
-      },
-      {
-        id: "toggle-theme",
-        label: "Cycle theme palette",
-        section: "Global",
-        shortcut: ["⌘", "J"],
-        icon: <SettingsIcon className="h-4 w-4" />,
-        run: () => cycleTheme(),
-      },
-      {
-        id: "open-orders",
-        label: "View recent orders",
-        section: "Navigate",
-        run: () => setActiveTab("orders"),
-      },
-    ];
+export default function DashboardOverviewPage() {
+  const { products, orders, isLoadingOrders, isLoadingProducts } = useDashboardData();
+  const { data: scripts, isLoading: scriptsLoading } = useScripts();
+  const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
 
-    if (productCommands) {
-      actions.push(
-        {
-          id: "create-product",
-          label: "Create product",
-          section: "Products",
-          shortcut: ["⌘", "N"],
-          run: () => productCommands.openCreate(),
-        },
-        {
-          id: "checkout-test",
-          label: "Run checkout test",
-          section: "Products",
-          run: () => productCommands.openCheckoutTest(),
-        }
-      );
-    }
-
-    return actions;
-  }, [productCommands, cycleTheme, setActiveTab, focusSearch]);
-
-  useCommandActions(navigationActions);
-  useCommandActions(utilityActions);
-
-  // --- Keyboard shortcut for search ---
-  React.useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const handler = (event: KeyboardEvent) => {
-      if ((event.key === "/" || event.key === "s") && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        event.preventDefault();
-        focusSearch();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [focusSearch]);
+  const latestOrders = orders.slice(0, 3);
 
   return (
-    <DashboardDataProvider>
-      <DashboardShell
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        searchRef={searchRef}
-        onOpenCommand={handleOpenCommand}
-      >
-        {activeTab === "products" ? (
-          <ProductsTab onRegisterCommands={setProductCommands} />
-        ) : activeTab === "dm-studio" ? (
-          <DMStudioTab />
-        ) : activeTab === "campaigns" ? (
-          <CampaignsTab />
-        ) : activeTab === "orders" ? (
-          <OrdersTab />
-        ) : activeTab === "scripts" ? (
-          <ScriptsTab />
-        ) : activeTab === "analytics" ? (
-          <AnalyticsTab />
-        ) : (
-          <SettingsTab />
-        )}
-      </DashboardShell>
-    </DashboardDataProvider>
+    <div className="space-y-10">
+      <header className="flex flex-col gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8 text-white">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <Badge variant="outline" className="border-white/50 bg-white/10 text-white">
+              Live Sandbox
+            </Badge>
+            <h2 className="text-3xl font-semibold tracking-tight text-white">Welcome back, Operator</h2>
+            <p className="max-w-2xl text-sm text-slate-200">
+              Review performance, ship new scripts, and track every DM-to-checkout journey without leaving your offline lab.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="secondary" className="rounded-full border border-white/40 bg-white/90 text-slate-900 hover:bg-white">
+              <Link href="/dashboard/dm-studio">Launch DM Studio</Link>
+            </Button>
+            <Button asChild variant="ghost" className="rounded-full border border-white/30 bg-transparent text-white hover:bg-white/10">
+              <Link href="/dashboard/products">Create product</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid gap-6 lg:grid-cols-4">
+        <StatCard
+          label="Products"
+          value={isLoadingProducts ? "—" : products.length.toString()}
+          description="Live offers ready for DM handoff"
+          icon={Sparkles}
+        />
+        <StatCard
+          label="Orders"
+          value={isLoadingOrders ? "—" : orders.length.toString()}
+          description="Completed DM-to-checkout conversions"
+          icon={Activity}
+        />
+        <StatCard
+          label="Scripts"
+          value={scriptsLoading || !scripts ? "—" : scripts.length.toString()}
+          description="Reusable flows in your library"
+          icon={Target}
+        />
+        <StatCard
+          label="Campaigns"
+          value={campaignsLoading || !campaigns ? "—" : campaigns.length.toString()}
+          description="Keyword-triggered campaigns ready to run"
+          icon={Rocket}
+        />
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <Card className="border-white/10 bg-white/5 text-white">
+          <CardHeader>
+            <CardTitle className="text-xl">Latest conversions</CardTitle>
+            <p className="text-sm text-slate-300">Recent fake checkouts generated by DM flows.</p>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {isLoadingOrders ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((key) => (
+                  <Skeleton key={key} className="h-16 w-full rounded-2xl bg-white/10" />
+                ))}
+              </div>
+            ) : latestOrders.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/20 p-6 text-center text-slate-300">
+                No orders yet. Run the checkout demo from Products to see fulfillment in action.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {latestOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div>
+                      <p className="text-sm font-medium text-white">{order.product.title}</p>
+                      <p className="text-xs text-slate-300">{order.buyerEmail}</p>
+                    </div>
+                    <div className="text-right text-xs text-slate-300">
+                      <p>{format(new Date(order.createdAt), "PP")}</p>
+                      <p className="font-mono text-sm text-white">${(order.totalCents / 100).toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="border-white/10 bg-white/5 text-white">
+          <CardHeader>
+            <CardTitle className="text-xl">Active campaigns</CardTitle>
+            <p className="text-sm text-slate-300">Monitor keywords, scripts, and their next send.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {campaignsLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((key) => (
+                  <Skeleton key={key} className="h-16 w-full rounded-2xl bg-white/10" />
+                ))}
+              </div>
+            ) : !campaigns || campaigns.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/20 p-6 text-center text-slate-300">
+                No campaigns scheduled. Create one from the Campaigns view to simulate DM triggers.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {campaigns.slice(0, 4).map((campaign) => (
+                  <div key={campaign.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-semibold text-white">{campaign.name}</span>
+                      <Badge variant="secondary" className="rounded-full bg-white/20 text-white">
+                        {campaign.status}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 grid gap-1 text-xs text-slate-300">
+                      <span>Keyword: <strong>{campaign.keyword}</strong></span>
+                      <span>
+                        Next send: {campaign.nextSendAt ? format(new Date(campaign.nextSendAt), "PP") : "Unscheduled"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white">
+        <h3 className="text-lg font-semibold">Quick start checklist</h3>
+        <ul className="mt-4 grid gap-3 text-sm text-slate-200 lg:grid-cols-2">
+          {["Create or import a DM script", "Launch the DM Studio simulator", "Send a fake checkout to confirm delivery", "Customize brand palette in Settings"].map((item) => (
+            <li key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">✓</span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
   );
 }

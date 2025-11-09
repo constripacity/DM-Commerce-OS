@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+
 export const metadata: Metadata = {
   title: "Dashboard | DM Commerce OS",
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-6">{children}</div>;
+  return <DashboardShell>{children}</DashboardShell>;
 }

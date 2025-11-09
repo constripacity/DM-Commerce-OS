@@ -1,119 +1,110 @@
 "use client";
 
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
-import { ChevronRight, Search, User } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  BarChart3,
+  Box,
+  ChartPie,
+  Megaphone,
+  MessagesSquare,
+  ScrollText,
+  Settings2,
+  ShoppingBag,
+} from "lucide-react";
+
+import { DashboardDataProvider } from "@/components/dashboard/dashboard-data-context";
+import { CommandKButton } from "@/components/dashboard/quick-actions";
+import { useCommandActions } from "@/components/command-palette";
 import { cn } from "@/lib/utils";
 
-export interface DashboardTabDefinition {
-  value: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-}
+const navItems = [
+  { href: "/dashboard", label: "Overview", icon: ChartPie },
+  { href: "/dashboard/products", label: "Products", icon: Box },
+  { href: "/dashboard/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/dashboard/dm-studio", label: "DM Studio", icon: MessagesSquare },
+  { href: "/dashboard/campaigns", label: "Campaigns", icon: Megaphone },
+  { href: "/dashboard/scripts", label: "Scripts", icon: ScrollText },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings2 },
+];
 
-interface DashboardShellProps {
-  tabs: DashboardTabDefinition[];
-  activeTab: string;
-  onTabChange: (value: string) => void;
-  searchRef: React.RefObject<HTMLInputElement>;
-  onOpenCommand: () => void;
-  children: React.ReactNode;
-  headerAction?: React.ReactNode;
-}
+export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
 
-export function DashboardShell({ tabs, activeTab, onTabChange, searchRef, onOpenCommand, children, headerAction }: DashboardShellProps) {
-  const active = tabs.find((tab) => tab.value === activeTab);
+  const navigationActions = React.useMemo(
+    () =>
+      navItems.map((item) => ({
+        id: `dashboard-${item.href}`,
+        label: item.label,
+        section: "Navigate",
+        run: () => router.push(item.href),
+      })),
+    [router]
+  );
+
+  useCommandActions(navigationActions);
 
   return (
-    <div className="grid min-h-[calc(100vh-2rem)] gap-6 pb-10 md:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr]">
-      <aside className="glass-panel hidden rounded-2xl border p-4 md:flex md:flex-col md:gap-3">
-        <div className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2">
-          <div>
-            <p className="text-sm font-semibold">DM Commerce OS</p>
-            <p className="text-xs text-muted-foreground">Sandboxed creator suite</p>
-          </div>
-          <div className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">Demo</div>
-        </div>
-        <nav className="mt-4 space-y-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const selected = tab.value === activeTab;
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => onTabChange(tab.value)}
-                className={cn(
-                  "group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition",
-                  selected
-                    ? "bg-primary text-primary-foreground shadow-subtle"
-                    : "hover:bg-muted"
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg border",
-                    selected ? "border-primary-foreground/40 bg-primary-foreground/20" : "border-transparent bg-muted/60"
-                  )}
-                >
-                  <Icon className={cn("h-4 w-4", selected ? "text-primary-foreground" : "text-muted-foreground")} />
-                </span>
-                <div className="flex flex-1 flex-col">
-                  <span className="text-sm font-semibold">{tab.label}</span>
-                  <span className="text-xs text-muted-foreground">{tab.description}</span>
-                </div>
-                <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-opacity", selected ? "opacity-100" : "opacity-0 group-hover:opacity-50")} />
-              </button>
-            );
-          })}
-        </nav>
-        <div className="mt-auto space-y-2 rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Need a reset?</p>
-          <p>
-            Run <code className="font-mono text-[11px] text-primary">pnpm prisma migrate reset --force</code> or{" "}
-            <code className="font-mono text-[11px] text-primary">npm exec prisma migrate reset --force</code>, then{" "}
-            <code className="font-mono text-[11px] text-primary">pnpm db:seed</code> (or{" "}
-            <code className="font-mono text-[11px] text-primary">npm run db:seed</code>) to restore demo data.
-          </p>
-        </div>
-      </aside>
-      <section className="flex flex-col gap-6">
-        <header className="sticky top-4 z-20 glass-panel rounded-2xl border px-6 py-4 shadow-subtle">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Dashboard</span>
-              <ChevronRight className="h-4 w-4" />
-              <span className="font-medium text-foreground">{active?.label ?? ""}</span>
+    <DashboardDataProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 pb-16 pt-10 lg:flex-row">
+          <aside className="w-full max-w-xs space-y-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_0_60px_rgba(15,23,42,0.35)] backdrop-blur lg:sticky lg:top-10 lg:h-[calc(100vh-5rem)]">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.28em] text-slate-300">DM Commerce OS</p>
+              <h1 className="text-2xl font-semibold text-white">Operator Console</h1>
+              <p className="text-sm text-slate-300">
+                Manage DM flows, offers, analytics and delivery without leaving your local sandbox.
+              </p>
             </div>
-            <div className="flex flex-1 flex-wrap items-center gap-3 md:justify-end">
-              <div className="relative flex-1 min-w-[200px] md:max-w-sm">
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  ref={searchRef}
-                  type="search"
-                  placeholder="Search workflows, orders, assets..."
-                  className="focus-ring w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm"
-                />
-              </div>
-              <Button variant="outline" className="gap-2" onClick={onOpenCommand}>
-                Command
-                <Kbd>⌘K</Kbd>
-              </Button>
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" className="rounded-full border border-border">
-                <User className="h-4 w-4" />
-                <span className="sr-only">Demo account</span>
-              </Button>
+
+            <div className="flex items-center justify-between">
+              <CommandKButton />
+              <div className="text-xs text-slate-300">Demo</div>
             </div>
-          </div>
-          {headerAction ? <div className="mt-4">{headerAction}</div> : null}
-        </header>
-        <div className="space-y-6">{children}</div>
-      </section>
-    </div>
+
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active =
+                  pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname?.startsWith(`${item.href}/`));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+                      active
+                        ? "bg-white/90 text-slate-900 shadow-lg shadow-white/40"
+                        : "text-slate-200 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto text-xs text-slate-300">
+              <p className="mb-2">Quick reset:</p>
+              <code className="block rounded bg-white/5 px-2 py-1 text-[11px]">pnpm prisma migrate reset --force</code>
+              <code className="mt-1 block rounded bg-white/5 px-2 py-1 text-[11px]">pnpm db:seed</code>
+            </div>
+          </aside>
+
+          <main className="flex-1">
+            <div className="min-h-[calc(100vh-5rem)] rounded-3xl border border-white/10 bg-slate-950/60 p-6 shadow-[0_0_80px_rgba(15,23,42,0.4)] backdrop-blur">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </DashboardDataProvider>
   );
 }
+
+export default DashboardShell;

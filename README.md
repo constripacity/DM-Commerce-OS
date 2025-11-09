@@ -43,6 +43,30 @@ Visit http://localhost:3000/login and use the demo credentials below.
 
 > 🔐 If you choose manual setup, copy `.env.example` to `.env.local`, set `APP_SECRET` to any long random string, and make sure `DATABASE_URL="file:./prisma/dev.db"` is present before running Prisma commands.
 
+### Manual install (optional)
+
+```bash
+# Install dependencies
+pnpm install
+# or
+npm install
+
+# Prepare environment
+cp .env.example .env.local
+
+# Generate Prisma client & apply migrations
+pnpm prisma generate
+pnpm prisma migrate dev --name init
+
+# Seed demo data
+pnpm db:seed
+
+# Run the app
+pnpm dev
+```
+
+Replace `pnpm` with `npm run` / `npm exec` equivalents if you do not have pnpm installed.
+
 ### Demo Credentials
 
 - **Email:** demo@local.test  

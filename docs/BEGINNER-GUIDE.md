@@ -30,10 +30,11 @@ DM-Commerce-OS is a local playground that shows the full "DM to checkout" funnel
 
 ## Before you start
 
-- **Supported systems:** Windows 10/11, macOS 13+, Ubuntu 22.04+.
-- **Requirements:** Node.js 18 or newer, internet access, and room for Node dependencies.
+- **Supported systems:** Windows 10/11, macOS 13+, Ubuntu 22.04+.  
+- **Requirements:** Node.js 18 or newer, internet access, and room for Node dependencies.  
 - **Optional:** Git. Downloading and extracting the ZIP works exactly the same.
 
+> ✅ Package manager tip: If you do not have pnpm installed, the setup script automatically falls back to npm. You can also run `corepack enable pnpm` to make pnpm available globally.  
 > 💡 On Windows use **PowerShell**. On macOS/Linux use **Terminal**.
 
 ---
@@ -67,7 +68,7 @@ npm run setup
 
 ## Option B — Manual Install
 
-1. **Get the code:** Clone or download the ZIP and extract it.
+1. **Get the code:** Clone or download the ZIP and extract it.  
 2. **Install dependencies:**
 
    ```bash
@@ -135,8 +136,8 @@ npm run setup
 
 ## Verify it works
 
-- Visit [http://localhost:3000/login](http://localhost:3000/login).
-- Sign in with `demo@local.test / demo123`.
+- Visit [http://localhost:3000/login](http://localhost:3000/login).  
+- Sign in with `demo@local.test / demo123`.  
 - Explore the dashboard tabs (Products, Orders, DM Studio, Campaigns, Analytics, Settings) to confirm seeded data appears.
 
 ---
@@ -173,8 +174,8 @@ npm run setup
 
 ## Where files live
 
-- **Database:** `prisma/dev.db` (SQLite file generated locally).
-- **Downloads served to users:** `public/files`.
+- **Database:** `prisma/dev.db` (SQLite file generated locally).  
+- **Downloads served to users:** `public/files`.  
 - **Environment secrets:** `.env.local` (keep this file private and out of version control).
 
 ---
