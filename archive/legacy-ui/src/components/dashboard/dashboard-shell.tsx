@@ -73,7 +73,12 @@ export function DashboardShell({ tabs, activeTab, onTabChange, searchRef, onOpen
         </nav>
         <div className="mt-auto space-y-2 rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">Need a reset?</p>
-          <p>Run <code className="font-mono text-[11px] text-primary">npm run demo:reset</code> to restore demo data.</p>
+          <p>
+            Run <code className="font-mono text-[11px] text-primary">pnpm prisma migrate reset --force</code> or{" "}
+            <code className="font-mono text-[11px] text-primary">npm exec prisma migrate reset --force</code>, then{" "}
+            <code className="font-mono text-[11px] text-primary">pnpm db:seed</code> (or{" "}
+            <code className="font-mono text-[11px] text-primary">npm run db:seed</code>) to restore demo data.
+          </p>
         </div>
       </aside>
       <section className="flex flex-col gap-6">

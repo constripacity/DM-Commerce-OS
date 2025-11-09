@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { Campaign, Script } from "@prisma/client";
+import type { Script } from "@prisma/client";
 import { Plus, Trash2 } from "lucide-react";
 import { useDashboardData } from "@/components/dashboard/dashboard-data-context";
 import { ChatWindow, type ChatMessageItem } from "@/components/chat/chat-window";
@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fillTemplate, getNextAutoReply, attachStageMarker, parseStageFromText, type DMFlowStage } from "@/lib/stateMachines/dmFlow";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useHotkeys } from "@/hooks/use-hotkeys";
+import { useCampaigns, useMessages, useScripts } from "@/hooks/useDashboardData";
 
 interface ScriptGroup {
   category: string;
@@ -66,10 +67,11 @@ const intentDisplayMap: Record<InspectorState["intent"], { label: string; tone: 
 export function DMStudioTab() {
   const { products } = useDashboardData();
   const { toast } = useToast();
-  const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
-  const [scripts, setScripts] = React.useState<Script[]>([]);
+  const { data: campaignsData, error: campaignsError } = useCampaigns(true);
+  const { data: scriptsData, error: scriptsError } = useScripts(true);
   const [messages, setMessages] = React.useState<ChatMessageItem[]>([]);
   const [sessionId, setSessionId] = React.useState(() => crypto.randomUUID());
+  const { data: rawMessages, error: messagesError } = useMessages(sessionId, Boolean(sessionId));
   const [selectedCampaignId, setSelectedCampaignId] = React.useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
@@ -80,6 +82,8 @@ export function DMStudioTab() {
   const [scriptOrder, setScriptOrder] = React.useState<Record<string, string[]>>({});
   const [inspector, setInspector] = React.useState<InspectorState>({ intent: "neutral" });
 
+  const campaigns = campaignsData ?? [];
+  const scripts = scriptsData ?? [];
   const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? campaigns[0];
   const selectedProduct = products.find((product) => product.id === (selectedProductId ?? products[0]?.id));
 
@@ -92,45 +96,62 @@ export function DMStudioTab() {
     [selectedProduct, selectedCampaign]
   );
 
+  const lastErrorToastRef = React.useRef<Record<string, number>>({});
+
+  const notifyError = React.useCallback(
+    (key: string, error: unknown, fallback: string) => {
+      if (!error) return;
+      const now = Date.now();
+      const lastShown = lastErrorToastRef.current[key] ?? 0;
+      if (now - lastShown < 10000) return;
+      lastErrorToastRef.current[key] = now;
+      toast({
+        title: fallback,
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
+    },
+    [toast]
+  );
+
   React.useEffect(() => {
-    async function loadMetadata() {
-      try {
-        const [campaignRes, scriptRes] = await Promise.all([
-          fetch("/api/campaigns", { credentials: "include", cache: "no-store" }),
-          fetch("/api/scripts", { credentials: "include", cache: "no-store" }),
-        ]);
-        if (!campaignRes.ok || !scriptRes.ok) throw new Error("Unable to load DM assets");
-        const [campaignData, scriptData] = await Promise.all([campaignRes.json(), scriptRes.json()]);
-        setCampaigns(campaignData);
-        setScripts(scriptData);
-        setSelectedCampaignId((current) => current ?? campaignData[0]?.id ?? null);
-        setScriptSelections((current) => {
-          const next = { ...current };
-          for (const script of scriptData) {
-            if (!next[script.category]) {
-              next[script.category] = script.id;
-            }
-          }
-          return next;
-        });
-        setScriptOrder(() => {
-          const grouped = groupScripts(scriptData);
-          const result: Record<string, string[]> = {};
-          for (const group of grouped) {
-            result[group.category] = group.items.map((item) => item.id);
-          }
-          return result;
-        });
-      } catch (error) {
-        toast({
-          title: "Failed to load DM library",
-          description: error instanceof Error ? error.message : "",
-          variant: "destructive",
-        });
-      }
+    notifyError("campaigns", campaignsError, "Failed to load campaigns");
+  }, [campaignsError, notifyError]);
+
+  React.useEffect(() => {
+    notifyError("scripts", scriptsError, "Failed to load scripts");
+  }, [notifyError, scriptsError]);
+
+  React.useEffect(() => {
+    notifyError("messages", messagesError, "Failed to load thread");
+  }, [messagesError, notifyError]);
+
+  React.useEffect(() => {
+    if (campaigns.length) {
+      setSelectedCampaignId((current) => current ?? campaigns[0]?.id ?? null);
     }
-    loadMetadata();
-  }, [toast]);
+  }, [campaigns]);
+
+  React.useEffect(() => {
+    if (!scripts.length) return;
+    setScriptSelections((current) => {
+      const next = { ...current };
+      for (const script of scripts) {
+        if (!next[script.category]) {
+          next[script.category] = script.id;
+        }
+      }
+      return next;
+    });
+    setScriptOrder(() => {
+      const grouped = groupScripts(scripts);
+      const result: Record<string, string[]> = {};
+      for (const group of grouped) {
+        result[group.category] = group.items.map((item) => item.id);
+      }
+      return result;
+    });
+  }, [scripts]);
 
   React.useEffect(() => {
     if (!selectedProductId && products[0]) {
@@ -139,35 +160,22 @@ export function DMStudioTab() {
   }, [products, selectedProductId]);
 
   React.useEffect(() => {
-    async function loadMessages() {
-      try {
-        const res = await fetch(`/api/messages?sessionId=${sessionId}`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error("Unable to load messages");
-        const data = await res.json();
-        const mapped: ChatMessageItem[] = data.map((item: any) => {
-          const parsed = parseStageFromText(item.text);
-          return {
-            id: item.id,
-            role: item.role,
-            text: parsed.text,
-            stage: parsed.stage,
-            timestamp: new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          };
-        });
-        setMessages(mapped);
-      } catch (error) {
-        toast({
-          title: "Failed to load thread",
-          description: error instanceof Error ? error.message : "",
-          variant: "destructive",
-        });
-      }
+    if (!rawMessages) {
+      setMessages([]);
+      return;
     }
-    loadMessages();
-  }, [sessionId, toast]);
+    const mapped: ChatMessageItem[] = rawMessages.map((item) => {
+      const parsed = parseStageFromText(item.text);
+      return {
+        id: item.id,
+        role: item.role as ChatMessageItem["role"],
+        text: parsed.text,
+        stage: parsed.stage,
+        timestamp: new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+    });
+    setMessages(mapped);
+  }, [rawMessages]);
 
   const scriptGroups = React.useMemo(() => groupScripts(scripts), [scripts]);
 
