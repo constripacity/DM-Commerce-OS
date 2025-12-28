@@ -132,6 +132,22 @@ View or edit the test at `tests/e2e.spec.ts`.
 
 Run `npx prisma migrate reset --force` followed by `npm run db:seed` (or the `pnpm` equivalents) anytime you want to rebuild the SQLite database.
 
+## Deploy to Render (Postgres)
+
+Render offers a managed Postgres database and web services that map cleanly to Prisma. To deploy this project on Render:
+
+1) **Create Render Postgres** and copy the **Internal Database URL** (postgres://...).  
+2) **Create a Render Web Service** pointing to this repo/branch.  
+3) **Set environment variables:**  
+   - `DATABASE_URL` = the Internal Database URL from Postgres  
+   - `APP_SECRET` = any long random string  
+4) **Build Command:** `npm ci && npm run prisma:generate && npm run build`  
+5) **Pre-Deploy Command:** `npx prisma migrate deploy`  
+6) **Start Command:** `npm run start`  
+7) **Optional seed (run once or behind a flag):** `npx prisma db seed`
+
+These steps match Render’s Postgres guidance and Prisma’s recommended deploy workflow.
+
 ## Screenshots to Capture
 
 Place exported images in `/public/screenshots/`:
