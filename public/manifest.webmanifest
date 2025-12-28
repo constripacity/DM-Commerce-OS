@@ -1,0 +1,16 @@
+{
+  "name": "DM Commerce OS",
+  "short_name": "DM Commerce",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Offline DM-to-checkout simulator for creators",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

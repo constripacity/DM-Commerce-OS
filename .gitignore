@@ -1,8 +1,11 @@
 dependencies
 
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
+
+DM Commerce Latest UI/
+DM Commerce Latest UI/node_modules/
 
 testing
 
