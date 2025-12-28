@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DM Commerce logo">
+  <rect width="128" height="128" rx="16" fill="#0f172a"/>
+  <path d="M30 36h24c14 0 26 10 26 28s-12 28-26 28H30V36Zm18 14v28h6c6.6 0 12-5.4 12-14s-5.4-14-12-14h-6Z" fill="#e5e7eb"/>
+  <path d="M74 36h24c14 0 26 10 26 28s-12 28-26 28H74V36Zm18 14v28h6c6.6 0 12-5.4 12-14s-5.4-14-12-14h-6Z" transform="scale(-1,1) translate(-148,0)" fill="#38bdf8"/>
+</svg>
