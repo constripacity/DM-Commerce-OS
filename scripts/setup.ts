@@ -6,6 +6,7 @@ import chalk from "chalk";
 
 const MIN_NODE_VERSION = 18;
 const WARN_NODE_MAJOR = 22;
+const DEFAULT_DATABASE_URL = "postgresql://user:password@localhost:5432/dmcommerce?schema=public";
 
 function logInfo(message: string) {
   console.log(chalk.cyan(`\n➡️  ${message}`));
@@ -111,7 +112,7 @@ function applyEnvTemplate(template: string, secret: string) {
   }
 
   if (!/DATABASE_URL=/.test(output)) {
-    output = `${output}\nDATABASE_URL=\"file:./prisma/dev.db\"`;
+    output = `${output}\nDATABASE_URL="${DEFAULT_DATABASE_URL}"`;
   }
 
   if (!output.endsWith("\n")) {
@@ -138,7 +139,7 @@ function ensureEnvContent(content: string, secret: string) {
     if (!output.endsWith("\n")) {
       output = `${output}\n`;
     }
-    output = `${output}DATABASE_URL=\"file:./prisma/dev.db\"`;
+    output = `${output}DATABASE_URL="${DEFAULT_DATABASE_URL}"`;
   }
 
   if (!output.endsWith("\n")) {

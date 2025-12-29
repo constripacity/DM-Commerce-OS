@@ -1,2 +1,2 @@
 # This is an auto-generated file. Do not edit manually.
-provider = "sqlite"
+provider = "postgresql"
