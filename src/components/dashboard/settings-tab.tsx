@@ -287,7 +287,7 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl border bg-white shadow-sm dark:bg-background">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border bg-background shadow-sm">
                 {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img alt="Brand logo preview" src={previewUrl} className="h-full w-full object-contain" />
@@ -337,17 +337,23 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                     type="button"
                     onClick={() => handleThemeSelect(palette.id)}
                     className={cn(
-                      "flex items-center justify-between rounded-xl border p-4 text-left transition hover:border-primary",
-                      theme === palette.id ? "border-primary bg-primary/5" : "border-border"
+                      "flex items-center justify-between gap-3 overflow-hidden rounded-xl border p-4 text-left transition",
+                      theme === palette.id
+                        ? "border-primary/80 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.25)_inset]"
+                        : "border-border bg-background/60 hover:border-primary/60 hover:bg-background/80"
                     )}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold">{palette.label}</p>
                       <p className="text-xs text-muted-foreground">{palette.description}</p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-background/80 p-1.5">
                       {palette.swatches.map((swatch) => (
-                        <span key={swatch} className="h-6 w-6 rounded-full border" style={{ backgroundColor: swatch }} />
+                        <span
+                          key={swatch}
+                          className="h-5 w-5 rounded-full border border-slate-900/40 shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset]"
+                          style={{ backgroundColor: swatch }}
+                        />
                       ))}
                     </div>
                   </button>
