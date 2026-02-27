@@ -53,10 +53,17 @@ export default async function DashboardOverviewPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild variant="secondary" className="rounded-full border border-white/40 bg-white/90 text-slate-900 hover:bg-white">
+            <Button
+              asChild
+              className="rounded-full border border-orange-300/40 bg-orange-500 text-white hover:bg-orange-400"
+            >
               <Link href="/dashboard/dm-studio">Launch DM Studio</Link>
             </Button>
-            <Button asChild variant="ghost" className="rounded-full border border-white/30 bg-transparent text-white hover:bg-white/10">
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-full border-orange-300/60 bg-orange-500/10 text-orange-100 hover:bg-orange-500/20 hover:text-white"
+            >
               <Link href="/dashboard/products">Create product</Link>
             </Button>
           </div>

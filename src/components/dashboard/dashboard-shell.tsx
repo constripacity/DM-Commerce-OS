@@ -92,6 +92,7 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, initialProducts, initialOrders }: DashboardShellProps) {
   const router = useRouter();
+  const didWarmRoutes = React.useRef(false);
 
   const navigationActions = React.useMemo(
     () =>
@@ -106,9 +107,59 @@ export function DashboardShell({ children, initialProducts, initialOrders }: Das
 
   useCommandActions(navigationActions);
 
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== "production") return;
+    if (didWarmRoutes.current) return;
+    didWarmRoutes.current = true;
+
+    let cancelled = false;
+
+    const warmRoutes = async () => {
+      const currentPath = window.location.pathname;
+      const targets = navItems.map((item) => item.href).filter((href) => href !== currentPath);
+
+      for (const href of targets) {
+        if (cancelled) break;
+
+        router.prefetch(href as any);
+
+        try {
+          await fetch(href, {
+            method: "HEAD",
+            credentials: "include",
+          });
+        } catch {
+          // Warmup is best-effort and should never impact navigation flow.
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+    };
+
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(() => {
+        void warmRoutes();
+      }, { timeout: 1500 });
+
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timer = window.setTimeout(() => {
+      void warmRoutes();
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [router]);
+
   return (
     <DashboardDataProvider initialProducts={initialProducts} initialOrders={initialOrders}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      <div className="dashboard-theme min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
         <div className="mx-auto flex w-full max-w-7xl flex-col lg:flex-row lg:gap-8 lg:px-6 lg:pb-16 lg:pt-10">
           
           {/* Mobile Header */}

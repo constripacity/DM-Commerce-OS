@@ -185,6 +185,28 @@
     color-scheme: dark;
   }
 
+  .dashboard-theme {
+    --surface: 228 44% 12%;
+    --highlight: 223 42% 18%;
+    --background: 228 44% 8%;
+    --foreground: 218 32% 94%;
+    --card: 224 42% 14%;
+    --card-foreground: 218 32% 94%;
+    --popover: 224 42% 14%;
+    --popover-foreground: 218 32% 94%;
+    --secondary: 223 30% 22%;
+    --secondary-foreground: 220 24% 92%;
+    --accent: 223 30% 22%;
+    --accent-foreground: 220 24% 92%;
+    --muted: 223 24% 20%;
+    --muted-foreground: 220 18% 74%;
+    --border: 224 26% 26%;
+    --input: 224 26% 26%;
+    --outline: 223 20% 40%;
+    --shadow-color: 220 40% 8%;
+    color-scheme: dark;
+  }
+
   * {
     @apply border-border;
   }

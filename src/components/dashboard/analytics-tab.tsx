@@ -133,7 +133,11 @@ export function AnalyticsTab({ data }: AnalyticsTabProps) {
               <CardTitle>Weekly trend</CardTitle>
               <CardDescription>Impressions and DM volume paired with new orders.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={handleExport}>
+            <Button
+              size="sm"
+              onClick={handleExport}
+              className="border border-orange-300/40 bg-orange-500 text-white hover:bg-orange-400"
+            >
               Export chart
             </Button>
           </CardHeader>
