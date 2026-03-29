@@ -11,6 +11,11 @@ DM Commerce OS is a self-contained Next.js application that demos how a creator 
 - **Analytics & settings:** Seeded funnel metrics blended with live order data plus branded dashboard theming with logo upload.
 - **Offline & educational:** SQLite database with Prisma seed script, no third-party APIs, and Playwright coverage for the primary happy path.
 
+![part 1](https://github.com/user-attachments/assets/f2ac3fea-16cf-4fd0-a170-e1b06e5730f6)
+
+![ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/6fcaf44d-28f7-4481-8dfd-3af7cdcb382a)
+
+
 ## Tech Stack
 
 - **Web:** Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, lucide-react  
