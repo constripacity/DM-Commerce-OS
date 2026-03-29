@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkoutSchema } from "@/lib/validators";
+import { requireAuthCookie } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  if (!requireAuthCookie(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const payload = await request.json().catch(() => null);
   if (!payload) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });

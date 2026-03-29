@@ -1,30 +1,85 @@
 import { format } from "date-fns";
-import { Activity, Rocket, Sparkles, Target } from "lucide-react";
+import {
+  Activity,
+  ChevronRight,
+  MessageSquare,
+  Package,
+  Plus,
+  Rocket,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import Link from "next/link";
 
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-function StatCard({ label, value, description, icon: Icon }: { label: string; value: string; description: string; icon: any }) {
+/* ------------------------------------------------------------------ */
+/*  Stat Card (inline — matches Dark Premium spec)                    */
+/* ------------------------------------------------------------------ */
+
+function StatCard({
+  label,
+  value,
+  description,
+  icon: Icon,
+  gradient,
+}: {
+  label: string;
+  value: string;
+  description: string;
+  icon: any;
+  gradient: string;
+}) {
   return (
-    <Card className="border-white/10 bg-white/5 text-slate-100 shadow-[0_10px_50px_rgba(15,23,42,0.35)] backdrop-blur">
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.32em] text-slate-400">{label}</p>
-          <CardTitle className="text-3xl font-semibold text-white">{value}</CardTitle>
+    <div className="group relative rounded-xl border border-border/50 bg-card/80 p-6 shadow-lg shadow-black/20 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/30">
+      {/* gradient top border */}
+      <div
+        className={`absolute inset-x-0 top-0 h-[2px] rounded-t-xl ${gradient}`}
+      />
+
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground/70">
+            {label}
+          </p>
+          <p className="text-3xl font-mono font-bold">{value}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
         </div>
-        <div className="rounded-full border border-white/20 bg-white/10 p-3 text-white">
-          <Icon className="h-5 w-5" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-slate-300">{description}</p>
-      </CardContent>
-    </Card>
+        <Icon className="h-5 w-5 text-muted-foreground/50" />
+      </div>
+    </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Section card wrapper                                              */
+/* ------------------------------------------------------------------ */
+
+function SectionCard({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+      <div className="flex items-center justify-between border-b border-border/50 px-6 py-4">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {action}
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Data-fetching & page                                              */
+/* ------------------------------------------------------------------ */
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,148 +90,235 @@ export default async function DashboardOverviewPage() {
     prisma.order.count(),
     prisma.script.count(),
     prisma.campaign.count(),
-    prisma.order.findMany({ include: { product: true }, orderBy: { createdAt: "desc" }, take: 3 }),
+    prisma.order.findMany({ include: { product: true }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.campaign.findMany({ orderBy: { startsOn: "asc" }, take: 4 }),
   ]);
 
+  const today = format(new Date(), "EEEE, MMMM d, yyyy");
+
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8 text-white">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <Badge variant="outline" className="border-white/50 bg-white/10 text-white">
-              Live Sandbox
-            </Badge>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">Welcome back, Operator</h2>
-            <p className="max-w-2xl text-sm text-slate-200">
-              Review performance, ship new scripts, and track every DM-to-checkout journey without leaving your offline lab.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              asChild
-              className="rounded-full border border-orange-300/40 bg-orange-500 text-white hover:bg-orange-400"
-            >
-              <Link href="/dashboard/dm-studio">Launch DM Studio</Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="rounded-full border-orange-300/60 bg-orange-500/10 text-orange-100 hover:bg-orange-500/20 hover:text-white"
-            >
-              <Link href="/dashboard/products">Create product</Link>
-            </Button>
-          </div>
-        </div>
+    <div className="space-y-8">
+      {/* ── Welcome header ────────────────────────────────────── */}
+      <header className="mb-8">
+        <h2 className="text-3xl font-bold tracking-tight">
+          Welcome back
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{today}</p>
       </header>
 
-      <section className="grid gap-6 lg:grid-cols-4">
+      {/* ── Stat cards ────────────────────────────────────────── */}
+      <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Products"
+          label="Total Products"
           value={productsCount.toString()}
-          description="Live offers ready for DM handoff"
+          description=""
           icon={Sparkles}
+          gradient="bg-gradient-to-r from-orange-500 to-amber-500"
         />
         <StatCard
-          label="Orders"
-          value={ordersCount.toString()}
-          description="Completed DM-to-checkout conversions"
-          icon={Activity}
-        />
-        <StatCard
-          label="Scripts"
-          value={scriptsCount.toString()}
-          description="Reusable flows in your library"
-          icon={Target}
-        />
-        <StatCard
-          label="Campaigns"
+          label="Active Campaigns"
           value={campaignsCount.toString()}
-          description="Keyword-triggered campaigns ready to run"
+          description=""
           icon={Rocket}
+          gradient="bg-gradient-to-r from-orange-500 to-amber-500"
+        />
+        <StatCard
+          label="Recent Orders"
+          value={ordersCount.toString()}
+          description=""
+          icon={Activity}
+          gradient="bg-gradient-to-r from-orange-500 to-amber-500"
+        />
+        <StatCard
+          label="Revenue"
+          value={`$${latestOrders.reduce((sum, o) => sum + o.product.priceCents, 0) / 100}`}
+          description=""
+          icon={Target}
+          gradient="bg-gradient-to-r from-orange-500 to-amber-500"
         />
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-white/10 bg-white/5 text-white">
-          <CardHeader>
-            <CardTitle className="text-xl">Latest conversions</CardTitle>
-            <p className="text-sm text-slate-300">Recent fake checkouts generated by DM flows.</p>
-          </CardHeader>
-          <CardContent className="space-y-5">
+      {/* ── Recent orders + Revenue placeholder ───────────────── */}
+      <section className="grid gap-6 lg:grid-cols-5">
+        {/* Revenue chart placeholder — col-span-3 */}
+        <div className="lg:col-span-3">
+          <SectionCard
+            title="Revenue Over Time"
+            action={
+              <Link
+                href="/dashboard/analytics"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View Details <ChevronRight className="h-3 w-3" />
+              </Link>
+            }
+          >
+            <div className="flex h-56 flex-col items-center justify-center rounded-lg text-sm text-muted-foreground">
+              <Activity className="mb-2 h-8 w-8 text-muted-foreground/30" />
+              <p>Revenue visualization</p>
+              <p className="text-xs">View full analytics for detailed charts</p>
+            </div>
+          </SectionCard>
+        </div>
+
+        {/* Recent orders — col-span-2 */}
+        <div className="lg:col-span-2">
+          <SectionCard
+            title="Recent Orders"
+            action={
+              <Link
+                href="/dashboard/orders"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View all <ChevronRight className="h-3 w-3" />
+              </Link>
+            }
+          >
             {latestOrders.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/20 p-6 text-center text-slate-300">
-                No orders yet. Run the checkout demo from Products to see fulfillment in action.
+              <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border/60 py-10 text-center text-sm text-muted-foreground">
+                <Package className="h-6 w-6 text-muted-foreground/40" />
+                No orders yet. Run the checkout demo to see fulfillment.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {latestOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div>
-                      <p className="text-sm font-medium text-white">{order.product.title}</p>
-                      <p className="text-xs text-slate-300">{order.buyerEmail}</p>
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {order.buyerName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {order.product.title}
+                      </p>
                     </div>
-                    <div className="text-right text-xs text-slate-300">
-                      <p>{format(new Date(order.createdAt), "PP")}</p>
-                      <p className="font-mono text-sm text-white">${(order.product.priceCents / 100).toFixed(2)}</p>
+                    <div className="ml-4 shrink-0 text-right">
+                      <p className="font-mono text-sm font-semibold">
+                        ${(order.product.priceCents / 100).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(order.createdAt), "MMM d")}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-        <Card className="border-white/10 bg-white/5 text-white">
-          <CardHeader>
-            <CardTitle className="text-xl">Active campaigns</CardTitle>
-            <p className="text-sm text-slate-300">Monitor keywords, scripts, and their next send.</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {campaigns.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/20 p-6 text-center text-slate-300">
-                No campaigns scheduled. Create one from the Campaigns view to simulate DM triggers.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {campaigns.slice(0, 4).map((campaign) => {
-                  const now = new Date();
-                  const start = new Date(campaign.startsOn);
-                  const end = new Date(campaign.endsOn);
-                  const status = now < start ? "Scheduled" : now > end ? "Completed" : "Active";
-
-                  return (
-                    <div key={campaign.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold text-white">{campaign.name}</span>
-                        <Badge variant="secondary" className="rounded-full bg-white/20 text-white">
-                          {status}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 grid gap-1 text-xs text-slate-300">
-                        <span>Keyword: <strong>{campaign.keyword}</strong></span>
-                        <span>
-                          Timeline: {format(start, "MMM d")} - {format(end, "MMM d")}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </SectionCard>
+        </div>
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white">
-        <h3 className="text-lg font-semibold">Quick start checklist</h3>
-        <ul className="mt-4 grid gap-3 text-sm text-slate-200 lg:grid-cols-2">
-          {["Create or import a DM script", "Launch the DM Studio simulator", "Send a fake checkout to confirm delivery", "Customize brand palette in Settings"].map((item) => (
-            <li key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">✓</span>
-              {item}
-            </li>
-          ))}
-        </ul>
+      {/* ── Active campaigns + Quick actions ──────────────────── */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        {/* Campaigns */}
+        <SectionCard
+          title="Active Campaigns"
+          action={
+            <Link
+              href="/dashboard/campaigns"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              View all <ChevronRight className="h-3 w-3" />
+            </Link>
+          }
+        >
+          {campaigns.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border/60 py-10 text-center text-sm text-muted-foreground">
+              <Rocket className="h-6 w-6 text-muted-foreground/40" />
+              No campaigns scheduled. Create one to simulate DM triggers.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {campaigns.map((campaign) => {
+                const now = new Date();
+                const start = new Date(campaign.startsOn);
+                const end = new Date(campaign.endsOn);
+                const status =
+                  now < start
+                    ? "Scheduled"
+                    : now > end
+                      ? "Completed"
+                      : "Active";
+                const dotColor =
+                  status === "Active"
+                    ? "bg-emerald-500"
+                    : status === "Scheduled"
+                      ? "bg-amber-500"
+                      : "bg-muted-foreground/50";
+
+                return (
+                  <div
+                    key={campaign.id}
+                    className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {campaign.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(start, "MMM d")} &ndash;{" "}
+                          {format(end, "MMM d")}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className="ml-3 shrink-0 rounded-full text-[10px]"
+                    >
+                      {campaign.keyword}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        {/* Quick Actions — 2x2 grid */}
+        <SectionCard title="Quick Actions">
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              {
+                label: "New Campaign",
+                icon: Rocket,
+                href: "/dashboard/campaigns",
+              },
+              {
+                label: "Add Product",
+                icon: Plus,
+                href: "/dashboard/products",
+              },
+              {
+                label: "DM Studio",
+                icon: MessageSquare,
+                href: "/dashboard/dm-studio",
+              },
+              {
+                label: "Analytics",
+                icon: Activity,
+                href: "/dashboard/analytics",
+              },
+            ].map((action) => (
+              <Button
+                key={action.label}
+                variant="ghost"
+                asChild
+                className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl border border-border/30 text-muted-foreground hover:border-border hover:text-foreground"
+              >
+                <Link href={action.href as any}>
+                  <action.icon className="h-6 w-6" />
+                  <span className="text-xs font-medium">{action.label}</span>
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </SectionCard>
       </section>
     </div>
   );

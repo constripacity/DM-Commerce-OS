@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createHmac, randomBytes } from "crypto";
+import crypto, { createHmac, randomBytes } from "crypto";
 
 const SESSION_COOKIE_NAME = "session";
 const SESSION_IDENTIFIER = "demo";
@@ -30,7 +30,8 @@ export function verifySignedSession(token: string | undefined) {
   const [value, nonce, signature] = parts;
   const payload = `${value}.${nonce}`;
   const expected = sign(payload);
-  return signature === expected && value === SESSION_IDENTIFIER;
+  if (signature.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected)) && value === SESSION_IDENTIFIER;
 }
 
 export function requireAuthCookie(request: Request) {

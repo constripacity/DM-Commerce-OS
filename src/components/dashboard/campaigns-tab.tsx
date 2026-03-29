@@ -26,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/data-table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { campaignPlanToText, generateCampaignPlan, type CampaignPlanEntry } from "@/lib/campaigns";
 import { formatDate, toDateInputValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -342,13 +341,13 @@ export function CampaignsTab() {
               type="button"
               onClick={() => setActiveCampaignId(campaign.id)}
               className={cn(
-                "w-full text-left",
+                "w-full text-left transition-colors",
                 activeCampaignId === campaign.id ? "text-primary" : ""
               )}
             >
               <div className="font-medium">{campaign.name}</div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline">DM {campaign.keyword}</Badge>
+                <Badge variant="outline" className="border-border/50 font-mono text-[10px]">DM {campaign.keyword}</Badge>
                 <span className="capitalize">{campaign.platform}</span>
               </div>
             </button>
@@ -369,8 +368,8 @@ export function CampaignsTab() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => openExport(row.original)}>
+          <div className="flex flex-wrap gap-2 opacity-0 transition-opacity group-hover/row:opacity-100 [tr:hover_&]:opacity-100">
+            <Button variant="outline" size="sm" onClick={() => openExport(row.original)} className="border-border/50">
               <Download className="mr-1 h-3.5 w-3.5" /> CSV
             </Button>
             <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(row.original)}>
@@ -389,32 +388,33 @@ export function CampaignsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Campaigns</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-3xl font-bold tracking-tight">Campaigns</h2>
+          <p className="mt-1 text-sm text-muted-foreground/70">
             Map your DM keyword calendar, tailor CSV exports, and keep promo windows tight.
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="gap-2">
+        <Button onClick={handleOpenCreate} className="gap-2" data-sim="new-campaign">
           <Plus className="h-4 w-4" /> New campaign
         </Button>
       </div>
 
+      {/* Two-column grid: roster + calendar */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <Card className="h-full">
-          <CardHeader className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Campaign roster</CardTitle>
-                <CardDescription>Pick a campaign to preview its content cadence.</CardDescription>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setViewDate(new Date())}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+        {/* Campaign roster */}
+        <div className="flex h-full flex-col rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+            <div>
+              <h3 className="text-lg font-semibold">Campaign roster</h3>
+              <p className="text-xs text-muted-foreground/70">Pick a campaign to preview its content cadence.</p>
             </div>
-          </CardHeader>
-          <CardContent>
+            <Button variant="ghost" size="icon" onClick={() => setViewDate(new Date())} className="text-muted-foreground hover:text-foreground">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 p-4">
             {campaigns.length ? (
               <DataTable columns={columns} data={campaigns} isLoading={loading} emptyMessage="No campaigns yet" />
             ) : (
@@ -429,24 +429,26 @@ export function CampaignsTab() {
                 }
               />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="h-full">
-          <CardHeader className="flex flex-col gap-4">
+        {/* Content calendar */}
+        <div className="flex h-full flex-col rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+          <div className="border-b border-border/40 px-5 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <CardTitle>Content calendar</CardTitle>
-                <CardDescription>
+                <h3 className="text-lg font-semibold">Content calendar</h3>
+                <p className="text-xs text-muted-foreground/70">
                   {activeCampaign
                     ? `${activeCampaign.name} · DM ${activeCampaign.keyword}`
                     : "Select a campaign to populate the grid."}
-                </CardDescription>
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-8 w-8 border-border/50"
                   onClick={() => setViewDate((date) => addMonths(date, -1))}
                   aria-label="Previous month"
                 >
@@ -456,6 +458,7 @@ export function CampaignsTab() {
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-8 w-8 border-border/50"
                   onClick={() => setViewDate((date) => addMonths(date, 1))}
                   aria-label="Next month"
                 >
@@ -463,27 +466,28 @@ export function CampaignsTab() {
                 </Button>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {/* Planner options */}
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
-                <label className="font-medium">Posts</label>
+                <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Posts</label>
                 <Input
                   type="number"
                   min={1}
                   max={30}
                   value={plannerOptions.posts}
                   onChange={(event) => handlePlannerChange("posts", Number(event.target.value) || 1)}
-                  className="h-8 w-16"
+                  className="h-8 w-16 border-border/50 bg-background/50"
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="font-medium">Stories</label>
+                <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Stories</label>
                 <Input
                   type="number"
                   min={1}
                   max={30}
                   value={plannerOptions.stories}
                   onChange={(event) => handlePlannerChange("stories", Number(event.target.value) || 1)}
-                  className="h-8 w-16"
+                  className="h-8 w-16 border-border/50 bg-background/50"
                 />
               </div>
               <label className="flex items-center gap-2">
@@ -491,10 +495,11 @@ export function CampaignsTab() {
                   type="checkbox"
                   checked={plannerOptions.includeHashtags}
                   onChange={(event) => handlePlannerChange("includeHashtags", event.target.checked)}
+                  className="rounded border-border/50"
                 />
-                Hashtags
+                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Hashtags</span>
               </label>
-              <Button variant="outline" size="sm" onClick={() => copyPlan()} disabled={!plan.length || copying} className="ml-auto">
+              <Button variant="outline" size="sm" onClick={() => copyPlan()} disabled={!plan.length || copying} className="ml-auto border-border/50">
                 {copying ? (
                   <ClipboardCheck className="mr-2 h-3.5 w-3.5 animate-pulse" />
                 ) : (
@@ -503,16 +508,18 @@ export function CampaignsTab() {
                 Copy plan
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-2 text-xs font-medium uppercase text-muted-foreground">
+          </div>
+          <div className="flex-1 p-4">
+            {/* Day-of-week header */}
+            <div className="grid grid-cols-7 gap-1.5 text-center">
               {"Mon Tue Wed Thu Fri Sat Sun".split(" ").map((day) => (
-                <div key={day} className="text-center">
+                <div key={day} className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                   {day}
                 </div>
               ))}
             </div>
-            <div className="mt-2 grid grid-cols-7 gap-2">
+            {/* Calendar grid */}
+            <div className="mt-2 grid grid-cols-7 gap-1.5">
               {calendarDays.map((day) => {
                 const iso = format(day, "yyyy-MM-dd");
                 const entries = planByDate.get(iso) ?? [];
@@ -521,29 +528,29 @@ export function CampaignsTab() {
                   <div
                     key={iso}
                     className={cn(
-                      "min-h-[110px] rounded-xl border p-2 text-xs transition",
-                      isCurrentMonth ? "bg-background" : "bg-muted text-muted-foreground",
-                      isToday(day) ? "border-primary ring-2 ring-primary/30" : "border-border"
+                      "min-h-[100px] rounded-lg border p-2 text-xs transition-colors",
+                      isCurrentMonth ? "border-border/40 bg-background/40" : "border-border/20 bg-muted/30 text-muted-foreground/60",
+                      isToday(day) ? "border-primary/60 ring-1 ring-primary/30" : ""
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold">{format(day, "d")}</span>
+                      <span className={cn("font-semibold", isToday(day) && "text-primary")}>{format(day, "d")}</span>
                       {entries.length ? (
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="h-4 border-border/50 px-1 text-[9px]">
                           {entries.length}
                         </Badge>
                       ) : null}
                     </div>
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-1.5 space-y-1">
                       {entries.map((entry) => (
                         <div
                           key={`${entry.type}-${entry.angle}-${entry.schedule}`}
-                          className="rounded-lg bg-muted/60 p-2 text-[11px]"
+                          className="rounded-md bg-primary/8 p-1.5 text-[10px]"
                         >
                           <p className="font-medium text-foreground">
                             {entry.type} · {entry.angle}
                           </p>
-                          <p className="mt-1 line-clamp-2 text-muted-foreground">{entry.hook}</p>
+                          <p className="mt-0.5 line-clamp-2 text-muted-foreground/70">{entry.hook}</p>
                         </div>
                       ))}
                     </div>
@@ -551,10 +558,11 @@ export function CampaignsTab() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
+      {/* Drawer form — PRESERVE all data-sim attributes */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
@@ -573,7 +581,7 @@ export function CampaignsTab() {
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Creator Guide Launch" {...field} />
+                        <Input placeholder="Creator Guide Launch" data-sim="campaign-name-input" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -587,7 +595,7 @@ export function CampaignsTab() {
                       <FormItem>
                         <FormLabel>Keyword</FormLabel>
                         <FormControl>
-                          <Input placeholder="GUIDE" {...field} />
+                          <Input placeholder="GUIDE" data-sim="campaign-keyword-input" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -624,7 +632,7 @@ export function CampaignsTab() {
                       <FormItem>
                         <FormLabel>Starts on</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" data-sim="campaign-starts-on" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -637,15 +645,15 @@ export function CampaignsTab() {
                       <FormItem>
                         <FormLabel>Ends on</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" data-sim="campaign-ends-on" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-                <Button type="submit" disabled={submitting} className="w-full">
-                  {submitting ? "Saving…" : dialogMode === "edit" ? "Save changes" : "Create campaign"}
+                <Button type="submit" disabled={submitting} className="w-full" data-sim="campaign-save-btn">
+                  {submitting ? "Saving..." : dialogMode === "edit" ? "Save changes" : "Create campaign"}
                 </Button>
               </form>
             </Form>
@@ -658,6 +666,7 @@ export function CampaignsTab() {
         </DrawerContent>
       </Drawer>
 
+      {/* Export dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -670,23 +679,25 @@ export function CampaignsTab() {
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <FormLabel className="text-xs uppercase text-muted-foreground">Posts</FormLabel>
+                  <FormLabel className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Posts</FormLabel>
                   <Input
                     type="number"
                     min={1}
                     max={30}
                     value={plannerOptions.posts}
                     onChange={(event) => handlePlannerChange("posts", Number(event.target.value) || 1)}
+                    className="mt-1.5 border-border/50 bg-background/50"
                   />
                 </div>
                 <div>
-                  <FormLabel className="text-xs uppercase text-muted-foreground">Stories</FormLabel>
+                  <FormLabel className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Stories</FormLabel>
                   <Input
                     type="number"
                     min={1}
                     max={30}
                     value={plannerOptions.stories}
                     onChange={(event) => handlePlannerChange("stories", Number(event.target.value) || 1)}
+                    className="mt-1.5 border-border/50 bg-background/50"
                   />
                 </div>
               </div>
@@ -698,8 +709,8 @@ export function CampaignsTab() {
                 />
                 Include hashtag column
               </label>
-              <div className="rounded-xl border bg-muted/40 p-4 text-sm">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">Preview</p>
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 text-sm">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Preview</p>
                 <div className="mt-2 space-y-2">
                   {previewPlan.slice(0, 3).map((entry) => (
                     <div key={`${entry.schedule}-${entry.type}-${entry.angle}`} className="text-sm">
@@ -710,12 +721,12 @@ export function CampaignsTab() {
                     </div>
                   ))}
                   {previewPlan.length > 3 ? (
-                    <p className="text-xs text-muted-foreground">…plus {previewPlan.length - 3} more rows</p>
+                    <p className="text-xs text-muted-foreground/60">...plus {previewPlan.length - 3} more rows</p>
                   ) : null}
                 </div>
               </div>
               <div className="flex flex-wrap justify-end gap-2">
-                <Button variant="outline" onClick={() => copyPlan(previewPlan)}>
+                <Button variant="outline" onClick={() => copyPlan(previewPlan)} className="border-border/50">
                   <Copy className="mr-2 h-3.5 w-3.5" /> Copy plan
                 </Button>
                 <Button onClick={() => exportTarget && downloadCsv(exportTarget, plannerOptions)}>

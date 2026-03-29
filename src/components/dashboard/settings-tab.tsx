@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Setting } from "@prisma/client";
 import { Palette, RefreshCw, Sparkles } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -181,31 +180,32 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
 
   if (!settingsData && isLoading) {
     return (
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle>Brand settings</CardTitle>
-          <CardDescription>Loading your preferences…</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="max-w-3xl rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+        <div className="border-b border-border/40 px-6 py-5">
+          <h3 className="text-lg font-semibold">Brand settings</h3>
+          <p className="text-xs text-muted-foreground/70">Loading your preferences...</p>
+        </div>
+        <div className="space-y-4 p-6">
           <Skeleton className="h-10 w-3/4" />
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-32 w-full" />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <Card className="max-w-3xl">
-          <CardHeader>
-            <CardTitle>Brand settings</CardTitle>
-            <CardDescription>
+        {/* Brand settings */}
+        <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+          <div className="border-b border-border/40 px-6 py-5">
+            <h3 className="text-lg font-semibold">Brand settings</h3>
+            <p className="text-xs text-muted-foreground/70">
               Customize the dashboard brand name, highlight color, and optional logo for exported assets.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+          </div>
+          <div className="p-6">
             <Form {...form}>
               <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
                 <FormField
@@ -215,7 +215,7 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                     <FormItem>
                       <FormLabel>Brand name</FormLabel>
                       <FormControl>
-                        <Input placeholder="DM Commerce OS" {...field} />
+                        <Input placeholder="DM Commerce OS" className="border-border/50 bg-background/50" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -229,13 +229,13 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                       <FormLabel>Primary color</FormLabel>
                       <div className="flex flex-wrap items-center gap-3">
                         <FormControl>
-                          <Input type="color" className="h-10 w-16 p-1" {...field} />
+                          <Input type="color" className="h-10 w-16 border-border/50 p-1" {...field} />
                         </FormControl>
-                        <Input value={field.value} onChange={field.onChange} className="max-w-[140px]" />
-                        <span className="text-xs text-muted-foreground">Contrast {contrastRatio.toFixed(2)}:1</span>
+                        <Input value={field.value} onChange={field.onChange} className="max-w-[140px] border-border/50 bg-background/50 font-mono" />
+                        <span className="font-mono text-xs text-muted-foreground/70">Contrast {contrastRatio.toFixed(2)}:1</span>
                         {!passesContrast ? (
-                          <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs text-destructive">
-                            Low contrast – pick a darker shade
+                          <span className="rounded-full bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
+                            Low contrast -- pick a darker shade
                           </span>
                         ) : null}
                       </div>
@@ -249,85 +249,91 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Logo</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Upload a square PNG or SVG. Files are stored locally under <code>/public/uploads</code>.
+                      <p className="text-xs text-muted-foreground/70">
+                        Upload a square PNG or SVG. Files are stored locally under <code className="font-mono text-foreground">/public/uploads</code>.
                       </p>
                       <FormControl>
-                        <Input type="file" accept="image/*" onChange={handleFileChange} />
+                        <Input type="file" accept="image/*" onChange={handleFileChange} className="border-border/50" />
                       </FormControl>
                       <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline" disabled={!previewUrl} onClick={handleClearLogo}>
+                        <Button type="button" variant="outline" disabled={!previewUrl} onClick={handleClearLogo} className="border-border/50">
                           Remove logo
                         </Button>
                         {watchedLogoPath && !logoFile && !removeLogo ? (
-                          <span className="text-sm text-muted-foreground">Current: {watchedLogoPath}</span>
+                          <span className="text-xs text-muted-foreground/70">Current: {watchedLogoPath}</span>
                         ) : null}
                       </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-6">
                   <Button type="submit" disabled={submitting} className="gap-2">
-                    <Sparkles className="h-4 w-4" /> {submitting ? "Saving…" : "Save preferences"}
+                    <Sparkles className="h-4 w-4" /> {submitting ? "Saving..." : "Save preferences"}
                   </Button>
-                  <Button type="button" variant="ghost" className="gap-2" onClick={() => setResetOpen(true)}>
+                  <Button type="button" variant="ghost" className="gap-2 text-destructive" onClick={() => setResetOpen(true)}>
                     <RefreshCw className="h-4 w-4" /> Reset demo data
                   </Button>
                 </div>
               </form>
             </Form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Visual preview</CardTitle>
-            <CardDescription>Your dashboard shell reflects these values.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Visual preview */}
+        <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+          <div className="border-b border-border/40 px-6 py-5">
+            <h3 className="text-lg font-semibold">Visual preview</h3>
+            <p className="text-xs text-muted-foreground/70">Your dashboard shell reflects these values.</p>
+          </div>
+          <div className="space-y-5 p-6">
+            {/* Brand mark */}
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl border bg-background shadow-sm">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-border/40 bg-background/40 shadow-sm">
                 {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img alt="Brand logo preview" src={previewUrl} className="h-full w-full object-contain" />
                 ) : (
-                  <span className="text-sm font-semibold text-muted-foreground">{watchedBrand?.slice(0, 2) || "DM"}</span>
+                  <span className="font-mono text-sm font-bold text-muted-foreground">{watchedBrand?.slice(0, 2) || "DM"}</span>
                 )}
               </div>
               <div>
                 <p className="text-sm font-semibold">{watchedBrand || "Your brand"}</p>
-                <p className="text-xs text-muted-foreground">Primary color {watchedColor}</p>
+                <p className="font-mono text-xs text-muted-foreground/70">Primary color {watchedColor}</p>
               </div>
             </div>
+
+            {/* CTA + Favicon preview */}
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border p-4">
-                <p className="text-xs uppercase text-muted-foreground">CTA preview</p>
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">CTA preview</p>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">DM keyword</p>
-                    <p className="text-xs text-muted-foreground">Your funnels will highlight this accent color.</p>
+                    <p className="text-xs text-muted-foreground/70">Your funnels will highlight this accent color.</p>
                   </div>
                   <div className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: watchedColor || "#6366F1" }}>
                     Try it now
                   </div>
                 </div>
               </div>
-              <div className="rounded-2xl border bg-muted/40 p-4">
-                <p className="text-xs uppercase text-muted-foreground">Favicon & social</p>
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Favicon & social</p>
                 <div className="mt-3 flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: watchedColor || "#6366F1" }}>
-                    <span className="text-sm font-semibold text-white">{watchedBrand?.slice(0, 1) || "D"}</span>
+                    <span className="font-mono text-sm font-bold text-white">{watchedBrand?.slice(0, 1) || "D"}</span>
                   </div>
-                  <div className="flex-1 rounded-lg border bg-background p-3 text-xs text-muted-foreground">
+                  <div className="flex-1 rounded-lg border border-border/40 bg-background/40 p-3 text-xs text-muted-foreground">
                     <p className="font-semibold text-foreground">{watchedBrand || "DM Commerce"}</p>
-                    <p>Keyword campaigns auto-style hero sections and previews.</p>
+                    <p className="text-muted-foreground/70">Keyword campaigns auto-style hero sections and previews.</p>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Theme palette */}
             <div className="space-y-3">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
+              <p className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                 <Palette className="h-3.5 w-3.5" /> Theme palette
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -337,17 +343,17 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                     type="button"
                     onClick={() => handleThemeSelect(palette.id)}
                     className={cn(
-                      "flex items-center justify-between gap-3 overflow-hidden rounded-xl border p-4 text-left transition",
+                      "flex items-center justify-between gap-3 overflow-hidden rounded-xl border p-4 text-left transition-all",
                       theme === palette.id
                         ? "border-primary/80 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.25)_inset]"
-                        : "border-border bg-background/60 hover:border-primary/60 hover:bg-background/80"
+                        : "border-border/40 bg-background/40 hover:border-primary/60 hover:bg-background/60"
                     )}
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-semibold">{palette.label}</p>
-                      <p className="text-xs text-muted-foreground">{palette.description}</p>
+                      <p className="text-xs text-muted-foreground/70">{palette.description}</p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-background/80 p-1.5">
+                    <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-background/60 p-1.5">
                       {palette.swatches.map((swatch) => (
                         <span
                           key={swatch}
@@ -360,10 +366,11 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                 ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
+      {/* Reset dialog */}
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent>
           <DialogHeader>
@@ -373,11 +380,11 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetOpen(false)} disabled={resetting}>
+            <Button variant="outline" onClick={() => setResetOpen(false)} disabled={resetting} className="border-border/50">
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleResetDemo} disabled={resetting}>
-              {resetting ? "Resetting…" : "Reset now"}
+              {resetting ? "Resetting..." : "Reset now"}
             </Button>
           </DialogFooter>
         </DialogContent>

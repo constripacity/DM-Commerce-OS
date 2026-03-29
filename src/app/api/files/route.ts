@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { requireAuthCookie } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!requireAuthCookie(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const filesDir = path.join(process.cwd(), "public", "files");
     const entries = await readdir(filesDir);

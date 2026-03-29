@@ -46,6 +46,7 @@ export function ChatInput({ value, onChange, onSubmit, commands, isSending }: Ch
         }}
         className="focus-ring min-h-[120px] resize-none rounded-2xl border bg-background px-4 py-3 text-sm shadow-inner"
         placeholder="Type a reply… Use / to insert scripts."
+        data-sim="dm-input"
       />
       {showCommands && commands.length ? (
         <div className="absolute inset-x-0 bottom-[90px] z-10 rounded-xl border bg-background p-3 shadow-subtle">
@@ -74,7 +75,7 @@ export function ChatInput({ value, onChange, onSubmit, commands, isSending }: Ch
       ) : null}
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Shift + Enter for a new line</span>
-        <Button onClick={onSubmit} disabled={isSending} className="gap-2">
+        <Button onClick={onSubmit} disabled={isSending} className="gap-2" data-sim="dm-send-btn">
           <Send className="h-4 w-4" /> {isSending ? "Sending" : "Send"}
         </Button>
       </div>

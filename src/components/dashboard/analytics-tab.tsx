@@ -15,14 +15,13 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useToast } from "@/components/ui/use-toast";
 import { AnalyticsResponse } from "@/lib/analytics";
+import { BarChart3, TrendingUp } from "lucide-react";
 
 interface AnalyticsTabProps {
   data: AnalyticsResponse;
@@ -120,32 +119,37 @@ export function AnalyticsTab({ data }: AnalyticsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Stat cards */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {statCards.map((card) => (
-          <StatCard key={card.title} title={card.title} value={card.value} description={card.description} delta={card.delta} trend="flat" />
+          <StatCard key={card.title} title={card.title} value={card.value} description={card.description} delta={card.delta} trend="flat" className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm" />
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card>
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Weekly Trend — full width area chart */}
+      <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+        <div className="flex flex-col gap-2 border-b border-border/40 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
             <div>
-              <CardTitle>Weekly trend</CardTitle>
-              <CardDescription>Impressions and DM volume paired with new orders.</CardDescription>
+              <h3 className="text-lg font-semibold">Weekly trend</h3>
+              <p className="text-xs text-muted-foreground/70">Impressions and DM volume paired with new orders.</p>
             </div>
-            <Button
-              size="sm"
-              onClick={handleExport}
-              className="border border-orange-300/40 bg-orange-500 text-white hover:bg-orange-400"
-            >
-              Export chart
-            </Button>
-          </CardHeader>
-          <CardContent ref={chartRef} className="h-80">
-            {mounted ? (
-              <div className="h-full w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chart} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExport}
+            className="border-border/50"
+          >
+            Export chart
+          </Button>
+        </div>
+        <div ref={chartRef} className="h-80 px-6 py-4">
+          {mounted ? (
+            <div className="h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chart} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorImpressions" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#c4b5fd" stopOpacity={0.35} />
@@ -156,67 +160,77 @@ export function AnalyticsTab({ data }: AnalyticsTabProps) {
                       <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.4} />
-                  <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} />
-                  <YAxis />
-                  <Tooltip formatter={(value: number) => Math.round(value).toLocaleString()} />
+                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.15} />
+                  <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    formatter={(value: number) => Math.round(value).toLocaleString()}
+                    contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                  />
                   <Legend />
                   <Area type="monotone" dataKey="impressions" stroke="#c4b5fd" fill="url(#colorImpressions)" strokeWidth={2} />
                   <Area type="monotone" dataKey="dms" stroke="#6366F1" fill="url(#colorDms)" strokeWidth={2} />
-                                      <Bar dataKey="orders" barSize={28} fill="#22c55e" opacity={0.8} />
-                                    </ComposedChart>
-                                  </ResponsiveContainer>
-                                </div>
-                              ) : null}
-                            </CardContent>
-                  
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Product mix</CardTitle>
-            <CardDescription>How orders split across digital offers.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-80">
+                  <Bar dataKey="orders" barSize={28} fill="#22c55e" opacity={0.8} radius={[4, 4, 0, 0]} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Product Mix + Funnel Performance — 2-column */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+          <div className="flex items-center gap-3 border-b border-border/40 px-6 py-5">
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="text-lg font-semibold">Product mix</h3>
+              <p className="text-xs text-muted-foreground/70">How orders split across digital offers.</p>
+            </div>
+          </div>
+          <div className="h-80 px-6 py-4">
             {productMix.length && mounted ? (
               <div className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                  <Tooltip formatter={(value: number) => `${value} orders`} />
-                  <Legend />
-                  <Pie data={productMix} dataKey="orders" nameKey="name" innerRadius={60} outerRadius={110} paddingAngle={4}>
-                    {productMix.map((entry, index) => (
-                      <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                                      </Pie>
-                                    </PieChart>
-                                  </ResponsiveContainer>
-                                </div>
-                              ) : (
-                  
+                    <Tooltip
+                      formatter={(value: number) => `${value} orders`}
+                      contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                    />
+                    <Legend />
+                    <Pie data={productMix} dataKey="orders" nameKey="name" innerRadius={60} outerRadius={110} paddingAngle={4}>
+                      {productMix.map((entry, index) => (
+                        <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No orders yet.</div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Funnel performance</CardTitle>
-          <CardDescription>Baseline funnel metrics seeded for your sandbox.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
-          {funnel.map((metric) => (
-            <div key={metric.label} className="rounded-xl border bg-muted/40 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
-                <Badge variant="outline">{metric.delta}</Badge>
+        <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+          <div className="border-b border-border/40 px-6 py-5">
+            <h3 className="text-lg font-semibold">Funnel performance</h3>
+            <p className="text-xs text-muted-foreground/70">Baseline funnel metrics seeded for your sandbox.</p>
+          </div>
+          <div className="grid gap-4 p-6 md:grid-cols-1">
+            {funnel.map((metric) => (
+              <div key={metric.label} className="rounded-lg border border-border/40 bg-background/40 p-4 transition-colors hover:bg-background/60">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">{metric.label}</p>
+                  <Badge variant="outline" className="border-border/50 text-xs">{metric.delta}</Badge>
+                </div>
+                <p className="mt-2 font-mono text-2xl font-bold">{metric.value}</p>
+                <p className="mt-1 text-xs text-muted-foreground/60">Synthetic baseline for demo traffic.</p>
               </div>
-              <p className="mt-3 text-2xl font-semibold">{metric.value}</p>
-              <p className="text-xs text-muted-foreground">Synthetic baseline for demo traffic.</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

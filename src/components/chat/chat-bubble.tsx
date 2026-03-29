@@ -13,9 +13,10 @@ interface ChatBubbleProps {
   role: "assistant" | "user";
   text: string;
   timestamp?: string;
+  "data-sim"?: string;
 }
 
-export function ChatBubble({ role, text, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ role, text, timestamp, "data-sim": dataSim }: ChatBubbleProps) {
   const formatted = React.useMemo(() => text.replace(/\{\{([^}]+)\}\}/g, "`{{$1}}`"), [text]);
 
   return (
@@ -24,6 +25,7 @@ export function ChatBubble({ role, text, timestamp }: ChatBubbleProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn("flex items-start gap-3", role === "assistant" ? "justify-start" : "justify-end")}
+      data-sim={dataSim}
     >
       {role === "assistant" ? (
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">

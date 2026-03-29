@@ -29,8 +29,14 @@ export function ChatWindow({ messages }: ChatWindowProps) {
     <ScrollArea className="h-[520px] rounded-2xl border bg-surface p-4">
       <div className="flex flex-col gap-4">
         <AnimatePresence initial={false}>
-          {messages.map((message) => (
-            <ChatBubble key={message.id} role={message.role} text={message.text} timestamp={message.timestamp} />
+          {messages.map((message, idx) => (
+            <ChatBubble
+              key={message.id}
+              role={message.role}
+              text={message.text}
+              timestamp={message.timestamp}
+              data-sim={idx === messages.length - 1 ? "dm-latest-message" : undefined}
+            />
           ))}
         </AnimatePresence>
         <div ref={endRef} />

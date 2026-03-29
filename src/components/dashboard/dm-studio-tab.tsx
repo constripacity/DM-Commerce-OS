@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { Script } from "@prisma/client";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Zap, MessageSquare, Settings2, Keyboard } from "lucide-react";
 import { useDashboardData } from "@/components/dashboard/dashboard-data-context";
 import { ChatWindow, type ChatMessageItem } from "@/components/chat/chat-window";
 import { ChatInput, type SlashCommand } from "@/components/chat/chat-input";
@@ -271,21 +271,31 @@ export function DMStudioTab() {
     [buildFlowContext, persistMessage]
   );
 
-  const handleSend = React.useCallback(async () => {
-    if (!draft.trim()) return;
+  const handleSend = React.useCallback(async (overrideText?: string) => {
+    const text = overrideText ?? draft;
+    if (!text.trim()) return;
     const userMessage: ChatMessageItem = {
       id: crypto.randomUUID(),
       role: "user",
-      text: draft,
+      text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-    setDraft("");
+    if (!overrideText) setDraft("");
     setIsSending(true);
     setMessages((prev) => [...prev, userMessage]);
-    await persistMessage({ role: "user", text: draft });
-    await maybeRespond(draft);
+    await persistMessage({ role: "user", text });
+    await maybeRespond(text);
     setIsSending(false);
   }, [draft, maybeRespond, persistMessage]);
+
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent<{ text: string }>).detail?.text;
+      if (text) handleSend(text);
+    };
+    window.addEventListener("sim-send-message", handler);
+    return () => window.removeEventListener("sim-send-message", handler);
+  }, [handleSend]);
 
   const slashCommands = React.useMemo<SlashCommand[]>(() => {
     return Object.entries(scriptSelections)
@@ -382,32 +392,34 @@ export function DMStudioTab() {
   const intentDisplay = intentDisplayMap[inspector.intent];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_1fr_260px]">
-      <aside className="glass-panel flex flex-col gap-4 rounded-2xl border p-4 shadow-subtle">
+    <div className="grid gap-4 lg:grid-cols-[240px_1fr_280px]" style={{ minHeight: "calc(100vh - 220px)" }}>
+      {/* Left panel — Configuration */}
+      <aside className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card/80 p-4 shadow-lg shadow-black/20 backdrop-blur-sm">
         <div>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase text-muted-foreground">Campaign</h3>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetThread} title="Reset session">
-              <Trash2 className="h-4 w-4" />
+            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Campaign</p>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={resetThread} title="Reset session">
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
           <Select value={selectedCampaign?.id ?? undefined} onValueChange={(value) => setSelectedCampaignId(value)}>
-            <SelectTrigger className="mt-2">
+            <SelectTrigger className="mt-2 h-9 border-border/50 bg-background/50 text-sm">
               <SelectValue placeholder="Choose campaign" />
             </SelectTrigger>
             <SelectContent>
               {campaigns.map((campaign) => (
                 <SelectItem key={campaign.id} value={campaign.id}>
-                  {campaign.name} (DM "{campaign.keyword}")
+                  {campaign.name} (DM &ldquo;{campaign.keyword}&rdquo;)
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
         <div>
-          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Product</h3>
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Product</p>
           <Select value={selectedProduct?.id ?? undefined} onValueChange={(value) => setSelectedProductId(value)}>
-            <SelectTrigger className="mt-2">
+            <SelectTrigger className="mt-2 h-9 border-border/50 bg-background/50 text-sm">
               <SelectValue placeholder="Select product" />
             </SelectTrigger>
             <SelectContent>
@@ -419,10 +431,11 @@ export function DMStudioTab() {
             </SelectContent>
           </Select>
         </div>
+
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Scripts</h3>
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Scripts</p>
           <Select value={activeCategory} onValueChange={setActiveCategory}>
-            <SelectTrigger className="h-7 w-36 text-xs">
+            <SelectTrigger className="h-7 w-28 border-border/50 bg-background/50 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -434,8 +447,9 @@ export function DMStudioTab() {
             </SelectContent>
           </Select>
         </div>
-        <ScrollArea className="h-[320px] rounded-xl border bg-muted/40 p-2">
-          <div className="space-y-2">
+
+        <ScrollArea className="h-[280px] rounded-lg border border-border/40 bg-background/30 p-2">
+          <div className="space-y-1.5">
             {orderedScripts
               .find((group) => group.category === activeCategory)?.items.map((script) => (
                 <button
@@ -447,23 +461,24 @@ export function DMStudioTab() {
                   onDrop={handleDrop(activeCategory, script.id)}
                   onClick={() => setScriptSelections((prev) => ({ ...prev, [activeCategory]: script.id }))}
                   className={cn(
-                    "w-full rounded-lg border px-3 py-2 text-left transition",
+                    "w-full rounded-lg border px-3 py-2 text-left transition-all",
                     scriptSelections[activeCategory] === script.id
-                      ? "border-primary bg-primary/10"
-                      : "border-transparent bg-background hover:border-border"
+                      ? "border-primary/60 bg-primary/10 shadow-sm shadow-primary/10"
+                      : "border-transparent hover:border-border/60 hover:bg-muted/40"
                   )}
                 >
-                  <p className="text-sm font-medium">{script.name}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{script.body}</p>
+                  <p className="text-sm font-medium leading-tight">{script.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground/70 line-clamp-2">{script.body}</p>
                 </button>
               )) ?? (
-              <p className="text-xs text-muted-foreground">No scripts for this category.</p>
+              <p className="px-2 py-4 text-xs text-muted-foreground/60">No scripts for this category.</p>
             )}
           </div>
         </ScrollArea>
-        <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Variables</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+
+        <div className="rounded-lg border border-dashed border-border/40 p-3">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Variables</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
             <VariableChip label={`{{product}} → ${replacements.product}`} />
             <VariableChip label={`{{price}} → ${replacements.price}`} />
             <VariableChip label={`{{keyword}} → ${replacements.keyword}`} />
@@ -471,62 +486,84 @@ export function DMStudioTab() {
         </div>
       </aside>
 
-      <section className="flex flex-col gap-4">
-        <div className="rounded-2xl border bg-background p-4 shadow-subtle">
+      {/* Center panel — Chat */}
+      <section className="flex flex-col gap-3">
+        <div className="flex-1 rounded-xl border border-border/50 bg-card/80 p-4 shadow-lg shadow-black/20 backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold">Conversation</h3>
-              <p className="text-xs text-muted-foreground">Automation nudges appear as the assistant responds.</p>
             </div>
-            {isTyping ? <span className="text-xs text-muted-foreground">Assistant is typing…</span> : null}
+            {isTyping ? (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                Assistant is typing...
+              </span>
+            ) : null}
           </div>
-          <div className="mt-4">
+          <p className="mt-0.5 text-xs text-muted-foreground/70">Automation nudges appear as the assistant responds.</p>
+          <div className="mt-3">
             <ChatWindow messages={messages} />
           </div>
         </div>
-        <div className="rounded-2xl border bg-background p-4 shadow-subtle">
+        <div className="rounded-xl border border-border/50 bg-card/80 p-4 shadow-lg shadow-black/20 backdrop-blur-sm">
           <ChatInput value={draft} onChange={setDraft} onSubmit={handleSend} commands={commands} isSending={isSending} />
         </div>
       </section>
 
-      <aside className="glass-panel flex flex-col gap-4 rounded-2xl border p-4 shadow-subtle">
+      {/* Right panel — Context */}
+      <aside className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card/80 p-4 shadow-lg shadow-black/20 backdrop-blur-sm">
         <div>
-          <h3 className="text-sm font-semibold uppercase text-muted-foreground">State machine</h3>
-          <div className="mt-2 rounded-xl border bg-background p-4">
-            <p className="text-xs text-muted-foreground">Current stage</p>
-            <p className="text-lg font-semibold">{stageSummary}</p>
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">State machine</p>
+          </div>
+          <div className="mt-2 rounded-lg border border-border/40 bg-background/40 p-4">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Current stage</p>
+            <p className="mt-1 font-mono text-xl font-bold tracking-tight" data-sim="dm-state-indicator">{stageSummary}</p>
             <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-              <p>Campaign keyword: <span className="font-medium text-foreground">{replacements.keyword}</span></p>
+              <p>Campaign keyword: <span className="font-mono font-bold text-foreground">{replacements.keyword}</span></p>
               <p>Next stage: <span className="font-medium text-foreground">{nextStageSummary}</span></p>
               <p>Recommended script: <span className="font-medium text-foreground">{recommendedScriptName}</span></p>
             </div>
           </div>
         </div>
+
         <div>
-          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Intent signals</h3>
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Intent signals</p>
+          </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <IntentBadge label={intentDisplay.label} tone={intentDisplay.tone} />
             {inspector.next ? <IntentBadge label={`Next: ${inspector.next}`} tone="positive" /> : null}
           </div>
         </div>
-        <div className="rounded-xl border bg-background p-4">
-          <p className="text-sm font-medium">Need to test checkout?</p>
-          <p className="text-xs text-muted-foreground">
+
+        <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+          <p className="text-sm font-semibold">Need to test checkout?</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">
             Jump to Products and run the fake checkout to experience fulfillment.
           </p>
           <Button
             className="mt-3 w-full gap-2"
+            size="sm"
+            data-sim="dm-open-checkout"
             onClick={() => window.dispatchEvent(new CustomEvent("dm-open-checkout"))}
           >
             <Plus className="h-4 w-4" /> Open Checkout
           </Button>
         </div>
-        <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Shortcuts</p>
-          <ul className="mt-2 space-y-1">
-            <li><strong>/</strong> – insert script</li>
-            <li><strong>⌘ + J</strong> – recommended script</li>
-            <li><strong>Shift + Enter</strong> – new line</li>
+
+        <div className="rounded-lg border border-dashed border-border/40 p-3">
+          <div className="flex items-center gap-2">
+            <Keyboard className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Shortcuts</p>
+          </div>
+          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-center justify-between"><span className="font-mono text-foreground">/</span> <span>insert script</span></li>
+            <li className="flex items-center justify-between"><span className="font-mono text-foreground">Cmd+J</span> <span>recommended script</span></li>
+            <li className="flex items-center justify-between"><span className="font-mono text-foreground">Shift+Enter</span> <span>new line</span></li>
           </ul>
         </div>
       </aside>

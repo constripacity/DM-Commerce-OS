@@ -69,6 +69,14 @@ export async function PUT(request: Request) {
   }
 
   if (logoFile instanceof File && logoFile.size > 0) {
+    const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+    const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    if (logoFile.size > MAX_LOGO_SIZE) {
+      return Response.json({ error: "File too large. Maximum 2MB." }, { status: 400 });
+    }
+    if (!ALLOWED_LOGO_TYPES.includes(logoFile.type)) {
+      return Response.json({ error: "Invalid file type. Use PNG, JPG, WebP, or SVG." }, { status: 400 });
+    }
     await ensureUploadDir();
     const buffer = Buffer.from(await logoFile.arrayBuffer());
     const sanitizedName = logoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");

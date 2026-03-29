@@ -26,7 +26,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/data-table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { VariableChip } from "@/components/chat/variable-chip";
 import { scriptSchema } from "@/lib/validators";
 import { fillTemplate } from "@/lib/stateMachines/dmFlow";
@@ -272,7 +271,7 @@ export function ScriptsTab() {
         cell: ({ row }) => (
           <div>
             <div className="font-medium">{row.original.name}</div>
-            <Badge variant="outline" className="mt-1 capitalize text-xs">
+            <Badge variant="outline" className="mt-1 border-border/50 capitalize text-[10px]">
               {row.original.category}
             </Badge>
           </div>
@@ -282,15 +281,15 @@ export function ScriptsTab() {
         accessorKey: "body",
         header: "Snippet",
         cell: ({ row }) => (
-          <p className="line-clamp-2 text-sm text-muted-foreground">{row.original.body}</p>
+          <p className="line-clamp-2 text-sm text-muted-foreground/70">{row.original.body}</p>
         ),
       },
       {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => openEditDrawer(row.original)}>
+          <div className="flex gap-2 opacity-0 transition-opacity [tr:hover_&]:opacity-100">
+            <Button variant="outline" size="sm" onClick={() => openEditDrawer(row.original)} className="border-border/50">
               Edit
             </Button>
             <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(row.original)}>
@@ -306,16 +305,17 @@ export function ScriptsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Script Library</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-3xl font-bold tracking-tight">Script Library</h2>
+          <p className="mt-1 text-sm text-muted-foreground/70">
             Craft reusable DM copy, flag duplicates, and keep revisions handy for each stage of the flow.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 border-border/50 bg-background/50">
               <SelectValue placeholder="Filter category" />
             </SelectTrigger>
             <SelectContent>
@@ -333,14 +333,51 @@ export function ScriptsTab() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Script catalogue</CardTitle>
-          <CardDescription>Use filters or the command palette to jump to a specific stage.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Script catalogue as cards */}
+      <div className="rounded-xl border border-border/50 bg-card/80 shadow-lg shadow-black/20 backdrop-blur-sm">
+        <div className="border-b border-border/40 px-6 py-5">
+          <h3 className="text-lg font-semibold">Script catalogue</h3>
+          <p className="text-xs text-muted-foreground/70">Use filters or the command palette to jump to a specific stage.</p>
+        </div>
+        <div className="p-5">
           {scripts.length ? (
-            <DataTable columns={columns} data={filteredScripts} isLoading={loading} emptyMessage="No scripts yet" />
+            filteredScripts.length ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredScripts.map((script) => (
+                  <button
+                    key={script.id}
+                    type="button"
+                    onClick={() => openEditDrawer(script)}
+                    className="group rounded-lg border border-border/40 bg-background/40 p-4 text-left transition-all hover:border-primary/40 hover:bg-background/60 hover:shadow-md hover:shadow-black/10"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium leading-tight">{script.name}</p>
+                        <Badge variant="outline" className="mt-1.5 border-border/50 capitalize text-[10px]">
+                          {script.category}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(script);
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="mt-2 line-clamp-3 text-xs text-muted-foreground/70">{script.body}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-muted-foreground/60">No scripts in this category.</p>
+            )
           ) : (
             <EmptyState
               icon={BookOpen}
@@ -353,9 +390,10 @@ export function ScriptsTab() {
               }
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* Drawer */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
@@ -405,7 +443,7 @@ export function ScriptsTab() {
                   />
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-semibold uppercase">Variables</span>
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Variables</span>
                       {variables.map((variable) => (
                         <button
                           key={variable}
@@ -420,7 +458,7 @@ export function ScriptsTab() {
                         type="button"
                         className={cn(
                           "ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]",
-                          monospace ? "border-primary text-primary" : "border-border text-muted-foreground"
+                          monospace ? "border-primary text-primary" : "border-border/50 text-muted-foreground"
                         )}
                         onClick={() => setMonospace((value) => !value)}
                       >
@@ -440,7 +478,7 @@ export function ScriptsTab() {
                                 textareaRef.current = element;
                               }}
                               rows={10}
-                              className={cn("resize-none", monospace && "font-mono")}
+                              className={cn("resize-none border-border/50", monospace && "font-mono")}
                               placeholder="Hey {{name}}!"
                             />
                           </FormControl>
@@ -462,21 +500,21 @@ export function ScriptsTab() {
                     ) : null}
                   </div>
                   <Button type="submit" disabled={submitting} className="gap-2">
-                    <Sparkles className="h-4 w-4" /> {submitting ? "Saving…" : editingScript ? "Save changes" : "Create script"}
+                    <Sparkles className="h-4 w-4" /> {submitting ? "Saving..." : editingScript ? "Save changes" : "Create script"}
                   </Button>
                 </div>
 
-                <aside className="space-y-4 rounded-xl border bg-muted/30 p-4 text-sm">
+                <aside className="space-y-4 rounded-xl border border-border/50 bg-card/80 p-4 text-sm shadow-lg shadow-black/20 backdrop-blur-sm">
                   <div className="space-y-2">
-                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">Live preview</h3>
-                    <div className="rounded-lg border bg-background p-3 shadow-subtle">
-                      <p className="text-xs uppercase text-muted-foreground">Tokens</p>
+                    <h3 className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Live preview</h3>
+                    <div className="rounded-lg border border-border/40 bg-background/40 p-3">
+                      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Tokens</p>
                       <div className="mt-1 flex flex-wrap gap-1 text-sm">
-                        {watchedBody ? renderPreviewTokens(watchedBody) : <span className="text-muted-foreground">No content yet</span>}
+                        {watchedBody ? renderPreviewTokens(watchedBody) : <span className="text-muted-foreground/60">No content yet</span>}
                       </div>
                     </div>
-                    <div className="rounded-lg border bg-background p-3 shadow-subtle">
-                      <p className="text-xs uppercase text-muted-foreground">Sample output</p>
+                    <div className="rounded-lg border border-border/40 bg-background/40 p-3">
+                      <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Sample output</p>
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} className="prose prose-sm dark:prose-invert">
                         {samplePreview || "Add copy to see the formatted preview."}
                       </ReactMarkdown>
@@ -484,20 +522,20 @@ export function ScriptsTab() {
                   </div>
                   {editingScript ? (
                     <div className="space-y-2">
-                      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
+                      <h3 className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                         <History className="h-3.5 w-3.5" /> Recent revisions
                       </h3>
                       <div className="space-y-2">
                         {(historyMap[editingScript.id] ?? []).length ? (
                           historyMap[editingScript.id]!.map((revision) => (
-                            <div key={revision.updatedAt} className="rounded-lg border bg-background p-3">
-                              <p className="text-xs text-muted-foreground">Saved {timeAgo(revision.updatedAt)} ago</p>
+                            <div key={revision.updatedAt} className="rounded-lg border border-border/40 bg-background/40 p-3">
+                              <p className="text-xs text-muted-foreground/70">Saved {timeAgo(revision.updatedAt)} ago</p>
                               <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{revision.body}</p>
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="mt-2"
+                                className="mt-2 border-border/50"
                                 onClick={() => restoreRevision(editingScript.id, revision)}
                               >
                                 Restore
@@ -505,16 +543,16 @@ export function ScriptsTab() {
                             </div>
                           ))
                         ) : (
-                          <p className="text-xs text-muted-foreground">No prior revisions saved yet.</p>
+                          <p className="text-xs text-muted-foreground/60">No prior revisions saved yet.</p>
                         )}
                       </div>
                     </div>
                   ) : null}
-                  <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-dashed border-border/40 p-3 text-xs text-muted-foreground">
                     <p className="font-semibold text-foreground">Stage guidance</p>
                     <p className="mt-1">
                       {categories.find((item) => item.value === watchedCategory)?.label ?? "Pitch"} scripts should end with a single clear CTA.
-                      Keep them between 120–160 characters for best results.
+                      Keep them between 120-160 characters for best results.
                     </p>
                   </div>
                 </aside>

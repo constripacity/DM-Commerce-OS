@@ -72,7 +72,7 @@ export function OrdersTab() {
         cell: ({ row }) => (
           <div>
             <p className="font-medium text-foreground">{row.original.buyerName}</p>
-            <p className="text-xs text-muted-foreground">{row.original.buyerEmail}</p>
+            <p className="text-xs text-muted-foreground/70">{row.original.buyerEmail}</p>
           </div>
         ),
       },
@@ -82,7 +82,7 @@ export function OrdersTab() {
         cell: ({ row }) => (
           <div>
             <p className="font-medium">{row.original.product.title}</p>
-            <p className="text-xs text-muted-foreground">{formatCurrencyFromCents(row.original.product.priceCents)}</p>
+            <p className="font-mono text-xs text-muted-foreground/70">{formatCurrencyFromCents(row.original.product.priceCents)}</p>
           </div>
         ),
       },
@@ -90,7 +90,13 @@ export function OrdersTab() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <Badge variant={row.original.status === "demo" ? "secondary" : "default"}>
+          <Badge
+            variant={row.original.status === "demo" ? "secondary" : "default"}
+            className={cn(
+              "text-[10px]",
+              row.original.status === "delivered" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+            )}
+          >
             {row.original.status === "demo" ? "Demo" : "Delivered"}
           </Badge>
         ),
@@ -98,15 +104,15 @@ export function OrdersTab() {
       {
         accessorKey: "createdAt",
         header: "Date",
-        cell: ({ row }) => <span>{formatDate(row.original.createdAt)}</span>,
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt)}</span>,
       },
       {
         id: "actions",
         header: "",
         cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => setDetailOrder(row.original)} className="gap-2">
-              <Info className="h-4 w-4" /> View
+          <div className="flex justify-end opacity-0 transition-opacity [tr:hover_&]:opacity-100">
+            <Button variant="outline" size="sm" onClick={() => setDetailOrder(row.original)} className="gap-2 border-border/50">
+              <Info className="h-3.5 w-3.5" /> View
             </Button>
           </div>
         ),
@@ -128,68 +134,73 @@ export function OrdersTab() {
 
   return (
     <section className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Orders</h2>
-          <p className="text-sm text-muted-foreground">Inspect the fake checkout trail and download purchased files instantly.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search buyer or product"
-            className="w-full max-w-xs"
-          />
-          <div className="flex items-center gap-2">
-            <Select value={productFilter} onValueChange={setProductFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Product" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All products</SelectItem>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="orders-from">
-              From
-            </label>
-            <Input id="orders-from" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="orders-to">
-              To
-            </label>
-            <Input id="orders-to" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setProductFilter("all");
-                setFromDate("");
-                setToDate("");
-                setSearch("");
-              }}
-            >
-              <RefreshCcw className="mr-1 h-4 w-4" /> Reset
-            </Button>
-          </div>
+          <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
+          <p className="mt-1 text-sm text-muted-foreground/70">Inspect the fake checkout trail and download purchased files instantly.</p>
         </div>
       </div>
 
-      <div className="glass-panel rounded-2xl border p-4 shadow-subtle">
-        <div className="flex items-center gap-3 pb-4 text-sm text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          Showing {rows.length} of {orders.length} orders
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-card/80 px-5 py-3 shadow-lg shadow-black/20 backdrop-blur-sm">
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search buyer or product"
+          className="w-full max-w-xs border-border/50 bg-background/50"
+        />
+        <Select value={productFilter} onValueChange={setProductFilter}>
+          <SelectTrigger className="w-40 border-border/50 bg-background/50">
+            <SelectValue placeholder="Product" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All products</SelectItem>
+            {products.map((product) => (
+              <SelectItem key={product.id} value={product.id}>
+                {product.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70" htmlFor="orders-from">
+            From
+          </label>
+          <Input id="orders-from" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="border-border/50 bg-background/50" />
+          <label className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70" htmlFor="orders-to">
+            To
+          </label>
+          <Input id="orders-to" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="border-border/50 bg-background/50" />
         </div>
-        <div className="overflow-hidden rounded-xl border">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          onClick={() => {
+            setProductFilter("all");
+            setFromDate("");
+            setToDate("");
+            setSearch("");
+          }}
+        >
+          <RefreshCcw className="mr-1 h-3.5 w-3.5" /> Reset
+        </Button>
+      </div>
+
+      {/* Table card */}
+      <div className="rounded-xl border border-border/50 bg-card/80 p-5 shadow-lg shadow-black/20 backdrop-blur-sm">
+        <div className="flex items-center gap-3 pb-4 text-sm text-muted-foreground/70">
+          <Filter className="h-4 w-4" />
+          Showing <span className="font-mono font-bold text-foreground">{rows.length}</span> of <span className="font-mono font-bold text-foreground">{orders.length}</span> orders
+        </div>
+        <div className="overflow-hidden rounded-lg border border-border/40">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="border-border/40 hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="bg-muted/40 text-xs uppercase tracking-wide">
+                    <TableHead key={header.id} className="bg-muted/30 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                       {header.isPlaceholder ? null : (
                         <div
                           className={cn(
@@ -200,9 +211,9 @@ export function OrdersTab() {
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {header.column.getIsSorted() === "asc" ? (
-                            <span>↑</span>
+                            <span className="text-primary">↑</span>
                           ) : header.column.getIsSorted() === "desc" ? (
-                            <span>↓</span>
+                            <span className="text-primary">↓</span>
                           ) : null}
                         </div>
                       )}
@@ -223,11 +234,15 @@ export function OrdersTab() {
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
+                table.getRowModel().rows.map((row, idx) => (
                   <TableRow
                     key={row.id}
-                    className="cursor-pointer transition hover:bg-muted/40"
+                    className={cn(
+                      "cursor-pointer border-border/30 transition-colors hover:bg-muted/30",
+                      idx % 2 === 1 && "bg-muted/10"
+                    )}
                     onClick={() => setDetailOrder(row.original)}
+                    data-sim={idx === 0 ? "orders-latest-row" : undefined}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
@@ -259,10 +274,10 @@ export function OrdersTab() {
               Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="border-border/50">
                 Previous
               </Button>
-              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="border-border/50">
                 Next
               </Button>
             </div>
@@ -270,29 +285,36 @@ export function OrdersTab() {
         ) : null}
       </div>
 
+      {/* Detail drawer — PRESERVE data-sim="order-detail-drawer" */}
       <Drawer open={Boolean(detailOrder)} onOpenChange={(open) => !open && setDetailOrder(null)}>
         <DrawerContent>
           {detailOrder ? (
             <>
-              <DrawerHeader>
+              <DrawerHeader data-sim="order-detail-drawer">
                 <DrawerTitle>Order details</DrawerTitle>
                 <DrawerDescription>Manual delivery preview for your fake checkout flow.</DrawerDescription>
               </DrawerHeader>
               <div className="grid gap-4 px-6 py-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Buyer</p>
-                  <p className="text-sm font-medium">{detailOrder.buyerName}</p>
-                  <p className="text-sm text-muted-foreground">{detailOrder.buyerEmail}</p>
+                <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Buyer</p>
+                  <p className="mt-1 text-sm font-medium">{detailOrder.buyerName}</p>
+                  <p className="text-sm text-muted-foreground/70">{detailOrder.buyerEmail}</p>
                 </div>
-                <div className="grid gap-1">
-                  <p className="text-xs text-muted-foreground">Product</p>
-                  <p className="text-sm font-medium">{detailOrder.product.title}</p>
-                  <p className="text-sm text-muted-foreground">{formatCurrencyFromCents(detailOrder.product.priceCents)}</p>
+                <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Product</p>
+                  <p className="mt-1 text-sm font-medium">{detailOrder.product.title}</p>
+                  <p className="font-mono text-sm text-muted-foreground/70">{formatCurrencyFromCents(detailOrder.product.priceCents)}</p>
                 </div>
-                <div className="grid gap-1">
-                  <p className="text-xs text-muted-foreground">Created</p>
-                  <p className="text-sm">{formatDate(detailOrder.createdAt)}</p>
-                  <Badge variant={detailOrder.status === "demo" ? "secondary" : "default"} className="w-fit">
+                <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Created</p>
+                  <p className="mt-1 text-sm">{formatDate(detailOrder.createdAt)}</p>
+                  <Badge
+                    variant={detailOrder.status === "demo" ? "secondary" : "default"}
+                    className={cn(
+                      "mt-2 w-fit text-[10px]",
+                      detailOrder.status === "delivered" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                    )}
+                  >
                     {detailOrder.status === "demo" ? "Demo" : "Delivered"}
                   </Badge>
                 </div>

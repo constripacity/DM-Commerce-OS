@@ -245,20 +245,20 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         cell: ({ row }) => (
           <div className="space-y-1">
             <p className="font-medium text-foreground">{row.original.title}</p>
-            <p className="text-xs text-muted-foreground">{row.original.description}</p>
+            <p className="text-xs text-muted-foreground/70">{row.original.description}</p>
           </div>
         ),
       },
       {
         accessorKey: "priceCents",
         header: "Price",
-        cell: ({ row }) => <span className="font-medium">{formatCurrencyFromCents(row.original.priceCents)}</span>,
+        cell: ({ row }) => <span className="font-mono font-bold">{formatCurrencyFromCents(row.original.priceCents)}</span>,
       },
       {
         accessorKey: "filePath",
         header: "Delivery",
         cell: ({ row }) => (
-          <Badge variant="secondary" className="font-mono text-xs">
+          <Badge variant="secondary" className="border-border/50 font-mono text-[10px]">
             {row.original.filePath.replace("/files/", "")}
           </Badge>
         ),
@@ -272,15 +272,15 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         header: "",
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2 justify-end">
-            <Button variant="ghost" size="icon" onClick={() => openEditDrawer(row.original)}>
-              <Edit className="h-4 w-4" />
+          <div className="flex items-center gap-1.5 justify-end opacity-0 transition-opacity [tr:hover_&]:opacity-100">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDrawer(row.original)}>
+              <Edit className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => openCheckoutModal(row.original)}>
-              <Download className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openCheckoutModal(row.original)} data-sim={row.index === 0 ? "product-first-checkout" : undefined}>
+              <Download className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleDelete(row.original)}>
-              <Trash2 className="h-4 w-4 text-destructive" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(row.original)}>
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
             </Button>
           </div>
         ),
@@ -544,13 +544,14 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
 
   return (
     <section className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Product library</h2>
-          <p className="text-sm text-muted-foreground">Manage micro-offers, pricing experiments, and delivery files.</p>
+          <h2 className="text-3xl font-bold tracking-tight">Product library</h2>
+          <p className="mt-1 text-sm text-muted-foreground/70">Manage micro-offers, pricing experiments, and delivery files.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" className="gap-2" onClick={saveCurrentView}>
+          <Button variant="outline" className="gap-2 border-border/50" onClick={saveCurrentView}>
             <Filter className="h-4 w-4" /> Save view
           </Button>
           <Button className="gap-2" onClick={openCreateDrawer}>
@@ -558,17 +559,19 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
           </Button>
         </div>
       </div>
-      <div className="glass-panel rounded-2xl border p-4 shadow-subtle">
+
+      {/* Table card */}
+      <div className="rounded-xl border border-border/50 bg-card/80 p-5 shadow-lg shadow-black/20 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-3 pb-4">
           <Input
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
             placeholder="Quick search products"
-            className="w-full max-w-sm"
+            className="w-full max-w-sm border-border/50 bg-background/50"
           />
           <div className="ml-auto flex items-center gap-2">
             <select
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              className="rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm transition-colors focus:border-primary/60 focus:outline-none"
               value={activeView ?? ""}
               onChange={(event) => {
                 const value = event.target.value;
@@ -591,18 +594,18 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                 Remove view
               </Button>
             ) : null}
-            <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2">
+            <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2 border-border/50">
               <FileText className="h-4 w-4" /> Export CSV
             </Button>
           </div>
         </div>
-        <div className="overflow-hidden rounded-xl border">
+        <div className="overflow-hidden rounded-lg border border-border/40">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="border-border/40 hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="bg-muted/40 text-xs uppercase tracking-wide">
+                    <TableHead key={header.id} className="bg-muted/30 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                       {header.isPlaceholder ? null : (
                         <div
                           className={cn(
@@ -613,9 +616,9 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {header.column.getIsSorted() === "asc" ? (
-                            <span>↑</span>
+                            <span className="text-primary">↑</span>
                           ) : header.column.getIsSorted() === "desc" ? (
-                            <span>↓</span>
+                            <span className="text-primary">↓</span>
                           ) : null}
                         </div>
                       )}
@@ -636,8 +639,15 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className="transition hover:bg-muted/40">
+                table.getRowModel().rows.map((row, idx) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={cn(
+                      "border-border/30 transition-colors hover:bg-muted/30",
+                      idx % 2 === 1 && "bg-muted/10"
+                    )}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
@@ -668,10 +678,10 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
               Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="border-border/50">
                 Previous
               </Button>
-              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="border-border/50">
                 Next
               </Button>
             </div>
@@ -679,9 +689,10 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         ) : null}
       </div>
 
+      {/* Bulk actions bar */}
       {selectedRows.length ? (
-        <div className="glass-panel flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-subtle">
-          <span className="font-medium text-foreground">{selectedRows.length} selected</span>
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-card/80 px-5 py-3 text-sm shadow-lg shadow-black/20 backdrop-blur-sm">
+          <span className="font-mono font-bold text-foreground">{selectedRows.length} selected</span>
           <Button variant="ghost" size="sm" className="gap-2" onClick={applyPriceDelta}>
             <Percent className="h-4 w-4" /> Adjust price
           </Button>
@@ -697,6 +708,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         </div>
       ) : null}
 
+      {/* Product drawer */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
@@ -754,7 +766,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                         <FormLabel>Delivery file</FormLabel>
                         <FormControl>
                           <select
-                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm"
                             value={field.value}
                             onChange={field.onChange}
                           >
@@ -771,10 +783,10 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                   />
                 </div>
                 <div className="grid gap-3">
-                  <p className="text-sm font-medium text-muted-foreground">Preview</p>
-                  <div className="rounded-lg border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground">
-                    File path will resolve to <code className="font-mono">{productForm.watch("filePath")}</code>. Ensure the PDF
-                    lives under <code className="font-mono">/public/files</code>.
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Preview</p>
+                  <div className="rounded-lg border border-dashed border-border/40 bg-background/40 p-4 text-sm text-muted-foreground">
+                    File path will resolve to <code className="font-mono text-foreground">{productForm.watch("filePath")}</code>. Ensure the PDF
+                    lives under <code className="font-mono text-foreground">/public/files</code>.
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
@@ -792,8 +804,9 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         </DrawerContent>
       </Drawer>
 
+      {/* Checkout modal — PRESERVE all data-sim attributes */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent>
+        <DialogContent data-sim="checkout-modal">
           <DialogHeader>
             <DialogTitle>Run checkout simulator</DialogTitle>
             <DialogDescription>
@@ -809,7 +822,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                   <FormItem>
                     <FormLabel>Buyer name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Jamie Creator" {...field} />
+                      <Input placeholder="Enter buyer name" data-sim="checkout-buyer-name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -822,7 +835,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="demo@example.com" type="email" {...field} />
+                      <Input placeholder="Enter email" data-sim="checkout-buyer-email" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -832,7 +845,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                 <Button type="button" variant="ghost" onClick={() => setCheckoutOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={checkoutSubmitting}>
+                <Button type="submit" disabled={checkoutSubmitting} data-sim="checkout-confirm-btn">
                   {checkoutSubmitting ? "Processing..." : "Record order"}
                 </Button>
               </DialogFooter>
