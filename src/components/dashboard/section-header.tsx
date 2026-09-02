@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ interface SectionHeaderProps {
   eyebrow: string;
   title: string;
   description: string;
-  cta?: { href: string; label: string };
+  cta?: { href: Route; label: string };
   actions?: ReactNode;
 }
 
@@ -24,7 +25,7 @@ export function SectionHeader({ eyebrow, title, description, cta, actions }: Sec
       <div className="flex flex-wrap items-center gap-3">
         {cta ? (
           <Button asChild variant="secondary" className="rounded-full border border-white/40 bg-white/90 text-slate-900 hover:bg-white">
-            <Link href={cta.href as any}>{cta.label}</Link>
+            <Link href={cta.href}>{cta.label}</Link>
           </Button>
         ) : null}
         {actions}

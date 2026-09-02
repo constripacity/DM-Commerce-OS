@@ -3,10 +3,12 @@ import { join } from "path";
 import { spawnSync } from "child_process";
 import crypto from "crypto";
 import chalk from "chalk";
+import {
+  restrictFileToOwnerSync,
+  writePrivateNewTextFileSync,
+} from "./utils/private-files";
 
-const MIN_NODE_VERSION = 18;
-const WARN_NODE_MAJOR = 22;
-const DEFAULT_DATABASE_URL = "postgresql://user:password@localhost:5432/dmcommerce?schema=public";
+const DEFAULT_DATABASE_URL = "file:./dev.db";
 
 function logInfo(message: string) {
   console.log(chalk.cyan(`\n➡️  ${message}`));
@@ -25,23 +27,25 @@ function logError(message: string) {
 }
 
 function ensureNodeVersion() {
-  const [majorStr] = process.versions.node.split(".");
+  const [majorStr, minorStr] = process.versions.node.split(".");
   const major = Number(majorStr);
+  const minor = Number(minorStr);
 
-  if (Number.isNaN(major)) {
+  if (Number.isNaN(major) || Number.isNaN(minor)) {
     logWarn("Unable to determine your Node.js version. Continuing, but things may fail.");
     return;
   }
 
-  if (major < MIN_NODE_VERSION) {
-    logError(`Node.js ${MIN_NODE_VERSION}+ is required. Detected ${process.versions.node}.`);
-    logInfo("Update Node.js from https://nodejs.org/ then rerun `npm run setup` or `pnpm run setup`.");
+  const supported =
+    (major === 20 && minor >= 19) ||
+    (major === 22 && minor >= 13) ||
+    major >= 24;
+  if (!supported) {
+    logError(`Use Node.js 20.19+, 22.13+, or 24+. Detected ${process.versions.node}.`);
+    logInfo("Update Node.js from https://nodejs.org/ then rerun `npm run setup`.");
     process.exit(1);
   }
 
-  if (major > WARN_NODE_MAJOR) {
-    logWarn(`Detected Node.js ${process.versions.node}. Versions above ${WARN_NODE_MAJOR} haven't been fully tested, but we'll keep going.`);
-  }
 }
 
 function ensureProjectRoot(root: string) {
@@ -52,6 +56,12 @@ function ensureProjectRoot(root: string) {
 }
 
 function detectPackageManager(): "pnpm" | "npm" {
+  if (existsSync(join(process.cwd(), "package-lock.json"))) {
+    return "npm";
+  }
+  if (existsSync(join(process.cwd(), "pnpm-lock.yaml"))) {
+    return "pnpm";
+  }
   const result = spawnSync("pnpm", ["--version"], { stdio: "ignore" });
   if (result.status === 0) {
     return "pnpm";
@@ -74,7 +84,7 @@ function runCommand(command: string, args: string[], description: string) {
 
 function ensureEnvFile(root: string) {
   const envExamplePath = join(root, ".env.example");
-  const envLocalPath = join(root, ".env.local");
+  const envPath = join(root, ".env");
 
   if (!existsSync(envExamplePath)) {
     throw new Error("Missing .env.example. Add one with APP_SECRET and DATABASE_URL before running setup.");
@@ -82,23 +92,25 @@ function ensureEnvFile(root: string) {
 
   const secret = crypto.randomBytes(32).toString("hex");
 
-  if (!existsSync(envLocalPath)) {
+  if (!existsSync(envPath)) {
     const template = readFileSync(envExamplePath, "utf8");
     const updated = applyEnvTemplate(template, secret);
-    writeFileSync(envLocalPath, updated);
-    logSuccess("Created .env.local from .env.example with a fresh APP_SECRET.");
+    writePrivateNewTextFileSync(envPath, updated);
+    logSuccess("Created .env from .env.example with a fresh APP_SECRET.");
     return;
   }
 
-  const current = readFileSync(envLocalPath, "utf8");
+  const current = readFileSync(envPath, "utf8");
   const updated = ensureEnvContent(current, secret);
 
   if (updated !== current) {
-    writeFileSync(envLocalPath, updated);
-    logSuccess("Updated .env.local with a secure APP_SECRET and default DATABASE_URL.");
+    writeFileSync(envPath, updated);
+    logSuccess("Updated .env with a secure APP_SECRET and local DATABASE_URL.");
   } else {
-    logSuccess(".env.local already looks good.");
+    logSuccess(".env already looks good.");
   }
+
+  restrictFileToOwnerSync(envPath);
 }
 
 function applyEnvTemplate(template: string, secret: string) {
@@ -115,6 +127,10 @@ function applyEnvTemplate(template: string, secret: string) {
     output = `${output}\nDATABASE_URL="${DEFAULT_DATABASE_URL}"`;
   }
 
+  if (!/CHECKPOINT_DISABLE=/.test(output)) {
+    output = `${output}\nCHECKPOINT_DISABLE=1`;
+  }
+
   if (!output.endsWith("\n")) {
     output = `${output}\n`;
   }
@@ -125,7 +141,9 @@ function applyEnvTemplate(template: string, secret: string) {
 function ensureEnvContent(content: string, secret: string) {
   let output = content.replace(/\r\n/g, "\n");
   const hasSecret = /APP_SECRET=.+/.test(output);
-  const needsSecret = /APP_SECRET=\s*$/.test(output) || /APP_SECRET=CHANGE_ME_TO_A_LONG_RANDOM_STRING/.test(output);
+  const needsSecret =
+    /APP_SECRET=\s*$/.test(output) ||
+    /APP_SECRET=(?:CHANGE_ME_TO_A_LONG_RANDOM_STRING|GENERATE_AT_INSTALL)/.test(output);
 
   if (!hasSecret || needsSecret) {
     if (hasSecret) {
@@ -140,6 +158,18 @@ function ensureEnvContent(content: string, secret: string) {
       output = `${output}\n`;
     }
     output = `${output}DATABASE_URL="${DEFAULT_DATABASE_URL}"`;
+  } else if (/DATABASE_URL=["']?postgres(?:ql)?:\/\/user:password@localhost:5432\/dm_?commerce(?:\?schema=public)?["']?/.test(output)) {
+    output = output.replace(
+      /DATABASE_URL=["']?postgres(?:ql)?:\/\/user:password@localhost:5432\/dm_?commerce(?:\?schema=public)?["']?/,
+      `DATABASE_URL="${DEFAULT_DATABASE_URL}"`,
+    );
+  }
+
+  if (!/CHECKPOINT_DISABLE=/.test(output)) {
+    if (!output.endsWith("\n")) {
+      output = `${output}\n`;
+    }
+    output = `${output}CHECKPOINT_DISABLE=1`;
   }
 
   if (!output.endsWith("\n")) {
@@ -170,7 +200,14 @@ async function main() {
 
   ensureEnvFile(root);
 
-  runCommand(pkgManager, ["install"], "Installing dependencies");
+  if (!process.argv.includes("--skip-install")) {
+    const installArgs = pkgManager === "npm" && existsSync(join(root, "package-lock.json"))
+      ? ["ci"]
+      : ["install"];
+    runCommand(pkgManager, installArgs, "Installing dependencies");
+  } else {
+    logSuccess("Dependencies installed from the committed npm lockfile.");
+  }
 
   const prismaArgsGenerate = pkgManager === "pnpm" ? ["prisma", "generate"] : ["exec", "prisma", "generate"];
   runCommand(pkgManager, prismaArgsGenerate, "Generating Prisma client");

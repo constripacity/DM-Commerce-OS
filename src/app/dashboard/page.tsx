@@ -10,8 +10,11 @@ import {
   Target,
 } from "lucide-react";
 import Link from "next/link";
+import type { Route } from "next";
+import type { LucideIcon } from "lucide-react";
 
 import { prisma } from "@/lib/db";
+import { getAnalyticsData } from "@/lib/analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +32,7 @@ function StatCard({
   label: string;
   value: string;
   description: string;
-  icon: any;
+  icon: LucideIcon;
   gradient: string;
 }) {
   return (
@@ -85,13 +88,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function DashboardOverviewPage() {
-  const [productsCount, ordersCount, scriptsCount, campaignsCount, latestOrders, campaigns] = await Promise.all([
+  const now = new Date();
+  const [productsCount, activeCampaignsCount, latestOrders, campaigns, analytics] = await Promise.all([
     prisma.product.count(),
-    prisma.order.count(),
-    prisma.script.count(),
-    prisma.campaign.count(),
+    prisma.campaign.count({
+      where: { startsOn: { lte: now }, endsOn: { gte: now } },
+    }),
     prisma.order.findMany({ include: { product: true }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.campaign.findMany({ orderBy: { startsOn: "asc" }, take: 4 }),
+    getAnalyticsData(),
   ]);
 
   const today = format(new Date(), "EEEE, MMMM d, yyyy");
@@ -111,36 +116,35 @@ export default async function DashboardOverviewPage() {
         <StatCard
           label="Total Products"
           value={productsCount.toString()}
-          description=""
+          description="Local digital offers"
           icon={Sparkles}
           gradient="bg-gradient-to-r from-orange-500 to-amber-500"
         />
         <StatCard
           label="Active Campaigns"
-          value={campaignsCount.toString()}
-          description=""
+          value={activeCampaignsCount.toString()}
+          description="Inside their run window"
           icon={Rocket}
           gradient="bg-gradient-to-r from-orange-500 to-amber-500"
         />
         <StatCard
-          label="Recent Orders"
-          value={ordersCount.toString()}
-          description=""
+          label="7-day Orders"
+          value={analytics.totals.orders.toString()}
+          description={`${analytics.totals.customers} unique customers`}
           icon={Activity}
           gradient="bg-gradient-to-r from-orange-500 to-amber-500"
         />
         <StatCard
           label="Revenue"
-          value={`$${latestOrders.reduce((sum, o) => sum + o.product.priceCents, 0) / 100}`}
-          description=""
+          value={`$${(analytics.totals.revenueCents / 100).toFixed(2)}`}
+          description="Simulated, event-attributed"
           icon={Target}
           gradient="bg-gradient-to-r from-orange-500 to-amber-500"
         />
       </section>
 
-      {/* ── Recent orders + Revenue placeholder ───────────────── */}
+      {/* ── Recent orders + event-backed revenue ──────────────── */}
       <section className="grid gap-6 lg:grid-cols-5">
-        {/* Revenue chart placeholder — col-span-3 */}
         <div className="lg:col-span-3">
           <SectionCard
             title="Revenue Over Time"
@@ -153,10 +157,24 @@ export default async function DashboardOverviewPage() {
               </Link>
             }
           >
-            <div className="flex h-56 flex-col items-center justify-center rounded-lg text-sm text-muted-foreground">
-              <Activity className="mb-2 h-8 w-8 text-muted-foreground/30" />
-              <p>Revenue visualization</p>
-              <p className="text-xs">View full analytics for detailed charts</p>
+            <div className="flex h-56 items-end gap-3" aria-label="Seven-day revenue chart">
+              {analytics.chart.map((point) => {
+                const maximum = Math.max(...analytics.chart.map((entry) => entry.revenueCents), 1);
+                const height = point.revenueCents ? Math.max(8, (point.revenueCents / maximum) * 100) : 2;
+                return (
+                  <div key={point.date} className="flex h-full min-w-0 flex-1 flex-col justify-end gap-2 text-center">
+                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                      ${(point.revenueCents / 100).toFixed(0)}
+                    </span>
+                    <div
+                      className="w-full rounded-t bg-gradient-to-t from-orange-600 to-amber-400"
+                      style={{ height: `${height}%` }}
+                      title={`${point.date}: $${(point.revenueCents / 100).toFixed(2)}`}
+                    />
+                    <span className="text-[10px] text-muted-foreground">{point.date.slice(5)}</span>
+                  </div>
+                );
+              })}
             </div>
           </SectionCard>
         </div>
@@ -196,7 +214,7 @@ export default async function DashboardOverviewPage() {
                     </div>
                     <div className="ml-4 shrink-0 text-right">
                       <p className="font-mono text-sm font-semibold">
-                        ${(order.product.priceCents / 100).toFixed(2)}
+                        ${(order.totalCents / 100).toFixed(2)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(order.createdAt), "MMM d")}
@@ -311,7 +329,7 @@ export default async function DashboardOverviewPage() {
                 asChild
                 className="flex h-24 flex-col items-center justify-center gap-2 rounded-xl border border-border/30 text-muted-foreground hover:border-border hover:text-foreground"
               >
-                <Link href={action.href as any}>
+                <Link href={action.href as Route}>
                   <action.icon className="h-6 w-6" />
                   <span className="text-xs font-medium">{action.label}</span>
                 </Link>

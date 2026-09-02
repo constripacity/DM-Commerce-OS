@@ -246,14 +246,14 @@ export function SettingsTab({ initialData }: SettingsTabProps) {
                 <FormField
                   control={form.control}
                   name="logoPath"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
                       <FormLabel>Logo</FormLabel>
                       <p className="text-xs text-muted-foreground/70">
-                        Upload a square PNG or SVG. Files are stored locally under <code className="font-mono text-foreground">/public/uploads</code>.
+                        Upload a square PNG, JPEG, or WebP. Files are signature-checked, stored outside the public tree under <code className="font-mono text-foreground">var/uploads/logos</code>, and served through an authenticated route.
                       </p>
                       <FormControl>
-                        <Input type="file" accept="image/*" onChange={handleFileChange} className="border-border/50" />
+                        <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFileChange} className="border-border/50" />
                       </FormControl>
                       <div className="flex items-center gap-2">
                         <Button type="button" variant="outline" disabled={!previewUrl} onClick={handleClearLogo} className="border-border/50">

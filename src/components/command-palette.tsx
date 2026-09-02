@@ -54,7 +54,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const actions = React.useMemo(() => Array.from(actionsRef.current.values()), [version]);
+  const actions = React.useMemo(() => {
+    void version;
+    return Array.from(actionsRef.current.values());
+  }, [version]);
 
   useHotkeys(
     [

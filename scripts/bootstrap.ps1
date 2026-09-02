@@ -22,28 +22,15 @@ Set-Location $ProjectRoot
 Write-Info "DM-Commerce-OS One-Click Setup (Windows)"
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-  Write-ErrorAndExit "Node.js is required. Please install Node 18 or later and rerun this script."
+  Write-ErrorAndExit "Node.js is required. Please install Node 20.19 or later and rerun this script."
 }
 
-$nodeMajor = [int]([string](node -p "process.versions.node.split('.')[0]"))
-if ($nodeMajor -lt 18) {
-  Write-ErrorAndExit "Node.js 18+ is required. Current version: $(node -v)."
+$nodeSupported = [string](node -p "const [major, minor] = process.versions.node.split('.').map(Number); (major === 20 && minor >= 19) || (major === 22 && minor >= 13) || major >= 24")
+if ($nodeSupported.Trim() -ne "true") {
+  Write-ErrorAndExit "Use Node.js 20.19+, 22.13+, or 24+. Current version: $(node -v)."
 }
 
-$usingPnpm = $true
-if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-  Write-Warn "pnpm was not found. Attempting to enable pnpm via Corepack..."
-  try {
-    corepack enable pnpm | Out-Null
-  } catch {
-    Write-Warn "Corepack enable failed or is unavailable. Falling back to npm."
-    $usingPnpm = $false
-  }
-  if ($usingPnpm -and -not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-    Write-Warn "pnpm still unavailable. Falling back to npm."
-    $usingPnpm = $false
-  }
-}
+$usingPnpm = (Test-Path (Join-Path $ProjectRoot "pnpm-lock.yaml")) -and [bool](Get-Command pnpm -ErrorAction SilentlyContinue)
 
 $packageManager = if ($usingPnpm) { "pnpm" } else { "npm" }
 $packageCommand = if ($usingPnpm) { "pnpm" } else { "npm" }
@@ -62,9 +49,9 @@ function Invoke-Step([string]$command, [string[]]$arguments) {
   }
 }
 
-$envPath = Join-Path $ProjectRoot ".env.local"
+$envPath = Join-Path $ProjectRoot ".env"
 if (-not (Test-Path $envPath)) {
-  Write-Info "Creating .env.local with secure APP_SECRET"
+  Write-Info "Creating .env with secure APP_SECRET and local SQLite URL"
   $secret = $null
   if (Get-Command openssl -ErrorAction SilentlyContinue) {
     $secret = (& openssl rand -hex 32).Trim()
@@ -72,12 +59,12 @@ if (-not (Test-Path $envPath)) {
   if (-not $secret) {
     $secret = (node -e "console.log(require('crypto').randomBytes(32).toString('hex'))").Trim()
   }
-  "APP_SECRET=$secret" | Out-File -FilePath $envPath -Encoding utf8
+  @("APP_SECRET=$secret", 'DATABASE_URL="file:./dev.db"', "CHECKPOINT_DISABLE=1") | Out-File -FilePath $envPath -Encoding utf8
 } else {
   $existing = Get-Content $envPath
   $secretLine = $existing | Where-Object { $_ -match '^APP_SECRET=' }
   if (-not $secretLine) {
-    Write-Info "Appending APP_SECRET to existing .env.local"
+    Write-Info "Appending APP_SECRET to existing .env"
     $secret = $null
     if (Get-Command openssl -ErrorAction SilentlyContinue) {
       $secret = (& openssl rand -hex 32).Trim()
@@ -86,7 +73,7 @@ if (-not (Test-Path $envPath)) {
       $secret = (node -e "console.log(require('crypto').randomBytes(32).toString('hex'))").Trim()
     }
     Add-Content -Path $envPath -Value "APP_SECRET=$secret"
-  } elseif ($secretLine -match 'GENERATE_AT_INSTALL') {
+  } elseif ($secretLine -match 'GENERATE_AT_INSTALL|CHANGE_ME_TO_A_LONG_RANDOM_STRING') {
     Write-Info "Replacing placeholder APP_SECRET"
     $secret = $null
     if (Get-Command openssl -ErrorAction SilentlyContinue) {
@@ -97,7 +84,16 @@ if (-not (Test-Path $envPath)) {
     }
     ($existing -replace '^APP_SECRET=.*', "APP_SECRET=$secret") | Set-Content -Path $envPath
   } else {
-    Write-Info ".env.local already has an APP_SECRET"
+    Write-Info ".env already has an APP_SECRET"
+  }
+  $existing = Get-Content $envPath
+  if (-not ($existing | Where-Object { $_ -match '^DATABASE_URL=' })) {
+    Write-Info "Appending the local SQLite DATABASE_URL to existing .env"
+    Add-Content -Path $envPath -Value 'DATABASE_URL="file:./dev.db"'
+  }
+  $existing = Get-Content $envPath
+  if (-not ($existing | Where-Object { $_ -match '^CHECKPOINT_DISABLE=' })) {
+    Add-Content -Path $envPath -Value "CHECKPOINT_DISABLE=1"
   }
 }
 
@@ -105,7 +101,7 @@ Write-Info "Installing dependencies with $packageManager"
 if ($usingPnpm) {
   Invoke-Step "pnpm" @("install")
 } else {
-  Invoke-Step "npm" @("install")
+  Invoke-Step "npm" @("ci")
 }
 
 function Invoke-PnpmOrNpm([string[]]$pnpmArgs, [string[]]$npmArgs) {

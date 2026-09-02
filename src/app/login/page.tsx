@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/lib/validators";
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +47,11 @@ export default function LoginPage() {
       return;
     }
 
-    const redirectTo = searchParams.get("from") ?? "/dashboard";
-    router.push(redirectTo as any);
+    const requestedPath = searchParams.get("from");
+    const redirectTo = requestedPath?.startsWith("/dashboard")
+      ? requestedPath
+      : "/dashboard";
+    router.push(redirectTo as Route);
   };
 
   return (
@@ -180,5 +184,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" aria-label="Loading login" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

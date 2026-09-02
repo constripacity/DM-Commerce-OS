@@ -16,9 +16,10 @@ export interface ChatMessageItem {
 
 interface ChatWindowProps {
   messages: ChatMessageItem[];
+  onCheckout?: () => void;
 }
 
-export function ChatWindow({ messages }: ChatWindowProps) {
+export function ChatWindow({ messages, onCheckout }: ChatWindowProps) {
   const endRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -35,6 +36,8 @@ export function ChatWindow({ messages }: ChatWindowProps) {
               role={message.role}
               text={message.text}
               timestamp={message.timestamp}
+              stage={message.stage}
+              onCheckout={onCheckout}
               data-sim={idx === messages.length - 1 ? "dm-latest-message" : undefined}
             />
           ))}

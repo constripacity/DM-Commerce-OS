@@ -2,16 +2,14 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { verifySignedSession } from "@/lib/auth";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const session = request.cookies.get("session")?.value;
   const isAuthed = verifySignedSession(session);
 
-  if (request.nextUrl.pathname.startsWith("/dashboard")) {
-    if (!isAuthed) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("from", request.nextUrl.pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (request.nextUrl.pathname.startsWith("/dashboard") && !isAuthed) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   if (request.nextUrl.pathname === "/login" && isAuthed) {

@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { generateFlowSteps, type SimulationStep } from "./steps/fullFlowSteps";
 
 export interface SimulationContextType {
@@ -51,7 +52,6 @@ function getElementCenter(el: HTMLElement): { x: number; y: number } {
 
 export function SimulationProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [isRunning, setIsRunning] = React.useState(false);
   const [isPaused, setIsPaused] = React.useState(false);
   const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
@@ -133,7 +133,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     const simSteps = stepsRef.current;
 
     // Map nav targets to routes
-    const navRoutes: Record<string, string> = {
+    const navRoutes: Record<string, Route> = {
       "nav-overview": "/dashboard",
       "nav-dm-studio": "/dashboard/dm-studio",
       "nav-campaigns": "/dashboard/campaigns",
@@ -270,7 +270,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       pauseRef.current = false;
       skipRef.current = false;
     }
-  }, [sleep, pathname, router, typeIntoElement, waitWhilePaused]);
+  }, [sleep, router, typeIntoElement, waitWhilePaused]);
 
   const start = React.useCallback(() => {
     if (isRunning) return;
@@ -330,7 +330,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       totalSteps: steps.length, currentPhase, cursorPos, targetRect,
       start, pause, resume, skip, exit,
     }),
-    [isRunning, isPaused, currentStep, currentStepIndex, currentPhase, cursorPos, targetRect, start, pause, resume, skip, exit]
+    [isRunning, isPaused, currentStep, currentStepIndex, steps.length, currentPhase, cursorPos, targetRect, start, pause, resume, skip, exit]
   );
 
   return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>;

@@ -1,83 +1,89 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const demoEmail = "demo@local.test";
-const demoPassword = "demo123";
-
 const productTitle = "Playwright Product";
 const productDescription = "Automation-friendly template for end-to-end demos.";
-const productPrice = "47";
-const productFilePath = "/files/creator-guide.pdf";
 const buyerName = "Playwright Tester";
 const buyerEmail = "pw@example.com";
 
 async function login(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(demoEmail);
-  await page.getByLabel("Password").fill(demoPassword);
+  await page.getByLabel("Email").fill("demo@local.test");
+  await page.getByLabel("Password").fill("demo123");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard/);
-  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-test("complete sandbox flow from product to delivery", async ({ page }) => {
+test("complete local DM to attributed delivery loop", async ({ page }) => {
   await login(page);
 
-  // Create a new product
+  await page.getByRole("link", { name: "Products" }).click();
   await page.getByRole("button", { name: "New product" }).click();
   await page.getByPlaceholder("Creator Playbook").fill(productTitle);
   await page.getByPlaceholder("Short pitch for the offer").fill(productDescription);
-  await page.getByLabel("Price (USD)").fill(productPrice);
-  await page.selectOption('select[name="filePath"]', productFilePath);
+  await page.getByLabel("Price (USD)").fill("47");
+  await page.getByLabel("Delivery file").selectOption("/files/creator-guide.pdf");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("cell", { name: productTitle })).toBeVisible();
+  await expect(page.getByText(productTitle, { exact: true }).first()).toBeVisible();
 
-  // Navigate to DM Studio
-  await page.getByRole("tab", { name: "DM Studio" }).click();
+  await page.getByRole("link", { name: "DM Studio" }).click();
   await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
 
-  // Ensure the new product is selected
   const productSelect = page.locator("button[role='combobox']").nth(1);
   await productSelect.click();
-  await page.getByRole("option", { name: productTitle }).click();
+  await page.getByRole("option", { name: new RegExp(productTitle) }).click();
 
-  const messageInput = page.getByPlaceholder("Type a reply… Use / to insert scripts.");
-
-  // Trigger pitch
-  await messageInput.fill("GUIDE");
+  const input = page.getByPlaceholder("Type a reply… Use / to insert scripts.");
+  await input.fill("GUIDE");
   await page.getByRole("button", { name: "Send" }).click();
-  await expect(page.locator('[data-testid="dm-message-assistant"][data-stage="pitch"]')).toContainText(
-    productTitle
-  );
+  await expect(page.locator('[data-testid="dm-message-assistant"][data-stage="pitch"]')).toContainText(productTitle);
 
-  // Trigger qualify
-  await messageInput.fill("Yes, I'm interested");
+  await input.fill("Yes, I am interested");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.locator('[data-testid="dm-message-assistant"][data-stage="qualify"]')).toBeVisible();
 
-  // Trigger checkout
-  await messageInput.fill("How much is it?");
+  await input.fill("How much does it cost?");
   await page.getByRole("button", { name: "Send" }).click();
-  const checkoutBubble = page.locator('[data-testid="dm-message-assistant"][data-stage="checkout"]');
-  await expect(checkoutBubble).toBeVisible();
+  const checkoutMessage = page.locator('[data-testid="dm-message-assistant"][data-stage="checkout"]');
+  await expect(checkoutMessage).toBeVisible();
+  await checkoutMessage.getByRole("button", { name: "Simulate checkout" }).click();
 
-  // Open checkout modal
-  await checkoutBubble.getByRole("button", { name: "Simulate checkout" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/products\?checkout=/);
+  await expect(page.getByRole("heading", { name: "Run checkout simulator" })).toBeVisible();
   await page.getByLabel("Buyer name").fill(buyerName);
-  await page.getByLabel("Buyer email").fill(buyerEmail);
-  await page.getByRole("button", { name: "Complete checkout" }).click();
+  await page.getByLabel("Email").fill(buyerEmail);
+  await page.getByLabel("Coupon code (optional)").fill("LAUNCH20");
+  await page.getByRole("button", { name: "Record order" }).click();
 
-  // Delivery message should appear
-  await expect(page.locator('[data-testid="dm-message-assistant"][data-stage="delivery"]')).toBeVisible();
+  await page.getByRole("link", { name: "Orders" }).click();
+  const row = page.locator("tr", { hasText: buyerName });
+  await expect(row).toContainText("$37.60");
+  await expect(row).toContainText("Creator Guide DM Push");
+  await row.click();
+  await expect(page.getByRole("link", { name: "Download file" })).toHaveAttribute(
+    "href",
+    "/files/creator-guide.pdf",
+  );
 
-  // Verify order recorded
-  await page.getByRole("tab", { name: "Orders" }).click();
-  const orderRow = page.locator("tr", { hasText: buyerName });
-  await expect(orderRow).toBeVisible();
-  
-  // Note: The 'codex' branch test logic for checking the download link was missing,
-  // but the logic from 'main' is compatible and important for a full e2e test.
-  // I've included the check from 'main' here.
-  await expect(orderRow.getByRole("button", { name: "View" })).toBeVisible();
-  await orderRow.getByRole("button", { name: "View" }).click();
-  await expect(page.getByRole("link", { name: "Download file" })).toHaveAttribute("href", productFilePath);
+  await page.getByRole("link", { name: "Analytics" }).click();
+  await expect(page.getByRole("heading", { name: "Campaign attribution" })).toBeVisible();
+  await expect(page.getByText("Creator Guide DM Push").first()).toBeVisible();
+});
+
+test("exports a complete flow pack and rejects unsafe imports", async ({ page }) => {
+  await login(page);
+  const exported = await page.request.get("/api/flow-packs");
+  expect(exported.ok()).toBe(true);
+  const pack = await exported.json();
+  expect(pack).toMatchObject({ schemaVersion: 1, keyword: "GUIDE" });
+  expect(pack.steps.length).toBeGreaterThanOrEqual(4);
+
+  const invalid = await page.request.post("/api/flow-packs", {
+    data: { schemaVersion: 1, name: "Broken", keyword: "BAD", steps: [] },
+  });
+  expect(invalid.status()).toBe(400);
+
+  const crossOrigin = await page.request.post("/api/demo-reset", {
+    headers: { origin: "https://attacker.example", "sec-fetch-site": "cross-site" },
+  });
+  expect(crossOrigin.status()).toBe(403);
 });

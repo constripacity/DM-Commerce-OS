@@ -8,15 +8,19 @@ import rehypeSanitize from "rehype-sanitize";
 import { Bot, User } from "lucide-react";
 import { VariableChip } from "@/components/chat/variable-chip";
 import { cn } from "@/lib/utils";
+import type { DMFlowStage } from "@/lib/stateMachines/dmFlow";
+import { Button } from "@/components/ui/button";
 
 interface ChatBubbleProps {
   role: "assistant" | "user";
   text: string;
   timestamp?: string;
+  stage?: DMFlowStage;
+  onCheckout?: () => void;
   "data-sim"?: string;
 }
 
-export function ChatBubble({ role, text, timestamp, "data-sim": dataSim }: ChatBubbleProps) {
+export function ChatBubble({ role, text, timestamp, stage, onCheckout, "data-sim": dataSim }: ChatBubbleProps) {
   const formatted = React.useMemo(() => text.replace(/\{\{([^}]+)\}\}/g, "`{{$1}}`"), [text]);
 
   return (
@@ -26,6 +30,8 @@ export function ChatBubble({ role, text, timestamp, "data-sim": dataSim }: ChatB
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn("flex items-start gap-3", role === "assistant" ? "justify-start" : "justify-end")}
       data-sim={dataSim}
+      data-testid={`dm-message-${role}`}
+      data-stage={stage}
     >
       {role === "assistant" ? (
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -59,6 +65,11 @@ export function ChatBubble({ role, text, timestamp, "data-sim": dataSim }: ChatB
         >
           {formatted}
         </ReactMarkdown>
+        {role === "assistant" && stage === "checkout" && onCheckout ? (
+          <Button className="mt-3" size="sm" onClick={onCheckout}>
+            Simulate checkout
+          </Button>
+        ) : null}
         {timestamp ? <p className="mt-2 text-xs text-muted-foreground/80">{timestamp}</p> : null}
       </div>
       {role === "user" ? (

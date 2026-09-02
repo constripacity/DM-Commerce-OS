@@ -3,13 +3,19 @@
     "node_modules/**",
     ".next/**",
     ".git/**",
+    "tmp/**",
+    "var/**",
     "public/screenshots/**",
     "prisma/dev.db",
-    "DM Commerce UI/**",
-    "old_ui_backup/**",
     "scan-report.json"
   ],
-  "allowEmails": ["demo@local.test"],
+  "allowEmails": ["demo@local.test", "i@izs.me"],
+  "allowMatches": [
+    "SECRET: \"playwright-secret-that-is-at-least-thirty-two-characters\"",
+    "SECRET = \"test-secret-that-is-long-enough-for-signing\"",
+    "SECRET = \"CHANGE_ME_TO_A_LONG_RANDOM_STRING\"",
+    "secret = \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\""
+  ],
   "treatAsBinary": [
     "**/*.pdf",
     "**/*.png",

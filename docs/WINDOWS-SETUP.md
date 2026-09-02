@@ -1,78 +1,66 @@
-# Windows Setup Guide for DM Commerce OS
+# Windows setup
 
-This guide is specifically designed for Windows users to navigate common setup issues like dependency conflicts and database configuration.
+Use PowerShell with an active Node.js LTS line (20.19+, 22.13+, or 24+). The repository uses npm and a committed lockfile; `--legacy-peer-deps` is not required.
 
-## Prerequisites
+## Guided setup
 
-- **Node.js**: Version 18 or 20. Run `node -v` to check.
-- **Git**: Installed and available in PowerShell/CMD.
-- **PowerShell**: Recommended shell for running these commands.
-
-## Step-by-Step Installation
-
-### 1. Install Dependencies
-
-Windows environments often encounter peer dependency conflicts with ESLint. Use the `--legacy-peer-deps` flag to bypass this.
+From the repository root:
 
 ```powershell
-npm install --legacy-peer-deps
-```
-
-### 2. Configure Environment
-
-Create a `.env` file in the root directory of the project. We will use SQLite for the simplest local setup.
-
-```env
-# .env
-APP_SECRET="any_long_random_string_at_least_32_chars"
-DATABASE_URL="file:./dev.db"
-SEED_ON_DEPLOY=true
-```
-
-> **Note:** The `DATABASE_URL` uses `file:./dev.db` to create a local SQLite database file, avoiding the need for a separate PostgreSQL server.
-
-### 3. Initialize Database
-
-We need to generate the Prisma client, create the database tables, and seed it with demo data.
-
-```powershell
-# 1. Generate the Prisma Client (fixes "Product is not defined" errors)
-npm run prisma:generate
-
-# 2. Create the database tables (creates dev.db)
-npx prisma migrate dev --name init
-
-# 3. Seed the database with the demo user and products
-npm run db:seed
-```
-
-### 4. Start the Application
-
-```powershell
+npm run setup
 npm run dev
 ```
 
-The app should now be running at **http://localhost:3000**.
+Open [http://localhost:3000/login](http://localhost:3000/login) and use `demo@local.test` / `demo123`.
 
-## Login Credentials
+## Manual setup
 
-- **Email:** `demo@local.test`
-- **Password:** `demo123`
+```powershell
+Copy-Item .env.example .env
+```
 
-## Troubleshooting Common Issues
+Edit `.env` so it contains a unique secret:
 
-### "Login temporarily unavailable"
-**Cause:** The application cannot connect to the database.
-**Fix:** Ensure your `.env` has `DATABASE_URL="file:./dev.db"` and that you ran `npm run db:seed`.
+```env
+APP_SECRET=replace-with-at-least-32-random-characters
+DATABASE_URL="file:./dev.db"
+```
 
-### "Product is not defined"
-**Cause:** The Prisma Client types haven't been generated.
-**Fix:** Run `npm run prisma:generate` and restart your VS Code / dev server.
+Then run:
 
-### "FormLabel or FormMessage must be used within a FormItem"
-**Cause:** A UI component structure issue in the Settings tab.
-**Fix:** This has been patched in the latest codebase. If you see it, ensure your `src/components/dashboard/settings-tab.tsx` wraps the Logo input in a `<FormField>`.
+```powershell
+npm ci
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run db:seed
+npm run dev
+```
 
-### Icons missing or "Module not found"
-**Cause:** Library version mismatches (e.g., `lucide-react` renaming icons).
-**Fix:** We have updated the code to use `BarChart3` instead of `ChartLine` and `PieChart` instead of `ChartPie`. Ensure you have run `npm install --legacy-peer-deps`.
+Although the environment URL says `file:./dev.db`, Prisma resolves it from `prisma/schema.prisma`; the generated file is `prisma/dev.db`.
+
+## Optional one-click launcher
+
+The platform script also installs, migrates, seeds, starts the app, and offers to open the browser:
+
+```powershell
+npm run setup:win
+```
+
+If local execution policy blocks scripts for this PowerShell session:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+npm run setup:win
+```
+
+## Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| `DATABASE_URL` is missing | Use root `.env`, not `.env.local`; rerun `npm run setup`. |
+| Prisma client types are missing | Run `npm run prisma:generate`, then restart the editor and dev server. |
+| Tables do not exist | Run `npm run prisma:migrate:deploy` and `npm run db:seed`. |
+| Port 3000 is busy | Run `npm run dev -- --port 3001`. |
+| Playwright Chromium is missing | Run `npm run test:install`, then `npm run test:e2e`. |
+
+Do not configure a PostgreSQL URL without first changing the Prisma provider and migrations. The supported default is local SQLite.

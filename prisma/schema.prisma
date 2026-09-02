@@ -22,15 +22,56 @@ model Product {
   filePath    String
   createdAt   DateTime @default(now())
   orders      Order[]
+  events      CommerceEvent[]
 }
 
 model Order {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  buyerName  String
-  buyerEmail String
-  createdAt  DateTime @default(now())
+  id            String    @id @default(cuid())
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  sessionId     String?
+  status        String    @default("delivered")
+  buyerName     String
+  buyerEmail    String
+  subtotalCents Int
+  discountCents Int       @default(0)
+  totalCents    Int
+  couponCode    String?
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  events         CommerceEvent[]
+
+  @@index([campaignId])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Coupon {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  kind            String
+  amount          Int
+  active          Boolean  @default(true)
+  maxRedemptions  Int?
+  redemptionCount Int      @default(0)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Script {
@@ -48,6 +89,8 @@ model Campaign {
   platform  String
   startsOn  DateTime
   endsOn    DateTime
+  orders    Order[]
+  events    CommerceEvent[]
 }
 
 model Message {
@@ -56,6 +99,24 @@ model Message {
   role      String
   text      String
   createdAt DateTime @default(now())
+}
+
+model CommerceEvent {
+  id             String    @id @default(cuid())
+  type           String
+  sessionId      String?
+  campaignId     String?
+  campaign       Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  productId      String?
+  product        Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  orderId        String?
+  order          Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  propertiesJson String?
+  createdAt      DateTime  @default(now())
+
+  @@index([type, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([campaignId, createdAt])
 }
 
 model Setting {

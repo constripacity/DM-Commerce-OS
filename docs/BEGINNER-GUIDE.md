@@ -1,198 +1,105 @@
-# DM-Commerce-OS Beginner Install Kit
+# Beginner install guide
 
-## Quick 3-Step Setup (Recommended)
+DM Commerce OS runs locally with Node.js, npm, and SQLite. It does not require Docker, a cloud database, or API keys.
 
-1. **Get the code:** Clone with Git (`git clone https://github.com/constripacity/DM-Commerce-OS.git`) or download the ZIP and extract it.
-2. **From the project folder:**
+## Recommended setup
 
-    ```bash
-    pnpm run setup
-    # or
-    npm run setup
-    ```
-3. **Start the app:**
-
-    ```bash
-    pnpm dev
-    # or
-    npm run dev
-    ```
-
-Then open http://localhost:3000/login and sign in with **demo@local.test / demo123**.
-
----
-
-## What you're installing
-
-DM-Commerce-OS is a local playground that shows the full "DM to checkout" funnel. You get a seeded SQLite database, demo auth powered by cookies, and a polished Next.js dashboard so you can explore without touching any production services.
-
----
-
-## Before you start
-
-- **Supported systems:** Windows 10/11, macOS 13+, Ubuntu 22.04+.  
-- **Requirements:** Node.js 18 or newer, internet access, and room for Node dependencies.  
-- **Optional:** Git. Downloading and extracting the ZIP works exactly the same.
-
-> ✅ Package manager tip: If you do not have pnpm installed, the setup script automatically falls back to npm. You can also run `corepack enable pnpm` to make pnpm available globally.  
-> 💡 On Windows use **PowerShell**. On macOS/Linux use **Terminal**.
-
----
-
-## Option A — Guided Setup (Recommended)
-
-### Windows (PowerShell)
-```powershell
-# Inside the DM-Commerce-OS folder
-pnpm run setup
-# or, if you only have npm installed
-npm run setup
-```
-
-### macOS / Linux (Terminal)
-```bash
-# Inside the DM-Commerce-OS folder
-pnpm run setup
-# or
-npm run setup
-```
-
-**What the setup script does:**
-1. Checks your Node.js version (requires 18+, warns if >22).
-2. Ensures `.env.local` exists by copying `.env.example`, generating a secure `APP_SECRET`, and making sure `DATABASE_URL="file:./prisma/dev.db"` is present.
-3. Detects `pnpm` (falls back to `npm`) and installs dependencies.
-4. Generates the Prisma client, creates the initial migration if it’s missing, applies migrations, and runs the seed.
-5. Prints the exact command to start the dev server and where to log in.
-
----
-
-## Option B — Manual Install
-
-1. **Get the code:** Clone or download the ZIP and extract it.  
-2. **Install dependencies:**
+1. Install an active Node.js LTS line: 20.19+, 22.13+, or 24+.
+2. Clone or download the repository and open a terminal in its root.
+3. Run:
 
    ```bash
-   pnpm install
-   # or
-   npm install
-   ```
-
-3. **Create your env file:**
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Edit `.env.local` so that it contains:
-
-   ```env
-   APP_SECRET=<any long random string>
-   DATABASE_URL="file:./prisma/dev.db"
-   ```
-
-4. **Generate Prisma client:**
-
-   ```bash
-   pnpm prisma generate
-   # or
-   npm run prisma:generate
-   ```
-
-5. **Run migrations:**
-
-   ```bash
-   pnpm prisma migrate dev --name init
-   # or
-   npm run prisma:migrate -- --name init
-   ```
-
-   If the migration already exists, run:
-
-   ```bash
-   pnpm prisma migrate deploy
-   # or
-   npm run prisma:migrate deploy
-   ```
-
-6. **Seed demo data:**
-
-   ```bash
-   pnpm db:seed
-   # or
-   npm run db:seed
-   ```
-
-7. **Start the dev server:**
-
-   ```bash
-   pnpm dev
-   # or
+   npm run setup
    npm run dev
    ```
 
-8. **Log in:** Email `demo@local.test` / password `demo123`.
+4. Open [http://localhost:3000/login](http://localhost:3000/login).
+5. Sign in with `demo@local.test` / `demo123`.
 
----
+The setup command:
 
-## Verify it works
+1. checks Node.js;
+2. installs dependencies from the committed npm lockfile before loading the setup helper;
+3. creates `.env` from `.env.example` and generates a random `APP_SECRET`;
+4. generates Prisma Client and applies committed migrations; and
+5. seeds the complete demo loop.
 
-- Visit [http://localhost:3000/login](http://localhost:3000/login).  
-- Sign in with `demo@local.test / demo123`.  
-- Explore the dashboard tabs (Products, Orders, DM Studio, Campaigns, Analytics, Settings) to confirm seeded data appears.
+The repository uses `package-lock.json`, so setup chooses npm even if pnpm happens to be installed globally.
 
----
+## Manual setup
 
-## Common errors & quick fixes
+```bash
+cp .env.example .env
+```
 
-| Symptom                         | Quick fix                                                                                                                |
-|---------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| **Node version is too old**     | Install Node.js 18+ from [nodejs.org](https://nodejs.org/), reopen your terminal, then rerun the setup command.          |
-| **PowerShell blocked the script** | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` in PowerShell and retry.                         |
-| **pnpm not installed**          | The script falls back to npm automatically. For pnpm, install via `corepack enable pnpm` or `npm install -g pnpm`.       |
-| **.env.local missing or blank** | Re-run `pnpm run setup` (or copy `.env.example` manually) to regenerate `.env.local` with `APP_SECRET` and `DATABASE_URL`.|
-| **Port 3000 already in use**    | Stop other dev servers or run `PORT=3001 pnpm dev` (or `npm run dev -- --port 3001`) and use the printed URL.            |
-| **Prisma migrate errors**       | Delete `prisma/dev.db`, rerun `pnpm run setup`, or run `pnpm prisma migrate reset --force` followed by `pnpm db:seed`.   |
-| **Playwright dependency errors**| These relate to optional end-to-end tests. Skip for now or run `pnpm run test:install` later if you need them.           |
-| **OpenSSL missing**             | The setup falls back to Node’s `crypto.randomBytes`. Install OpenSSL if you want command-line secret generation.          |
+Edit `.env`:
 
----
+```env
+APP_SECRET=replace-with-at-least-32-random-characters
+DATABASE_URL="file:./dev.db"
+```
 
-## Reset / Uninstall
+Then run:
 
-- **Reset demo data:**
+```bash
+npm ci
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run db:seed
+npm run dev
+```
 
-  ```bash
-  pnpm prisma migrate reset --force
-  pnpm db:seed
-  ```
+Prisma resolves its relative SQLite URL from the schema directory. `file:./dev.db` therefore creates `prisma/dev.db`.
 
-  (For npm use `npm exec prisma migrate reset -- --force` and then `npm run db:seed`.)
+## Confirm the install
 
-- **Full cleanup:** Delete `node_modules/` and `prisma/dev.db`, then rerun Option A to reinstall.
+After login, the dashboard should show two products, two campaigns, six historical orders, and campaign-attributed analytics. The fastest end-to-end check is:
 
----
+1. Open DM Studio.
+2. Send `GUIDE`, `yes`, and `how much?`.
+3. Follow the checkout button and complete a local order with `LAUNCH20`.
+4. Confirm the order and download in Orders.
+5. Confirm the campaign changes in Analytics.
 
-## Where files live
+For an automated probe, start the app and run this in a second terminal:
 
-- **Database:** `prisma/dev.db` (SQLite file generated locally).  
-- **Downloads served to users:** `public/files`.  
-- **Environment secrets:** `.env.local` (keep this file private and out of version control).
+```bash
+npm run smoke
+```
 
----
+## Common fixes
 
-## FAQ
+| Symptom | Fix |
+| --- | --- |
+| Node is unsupported | Install an active Node.js LTS line (20.19+, 22.13+, or 24+) and reopen the terminal. |
+| `.env` is missing | Rerun `npm run setup`, or copy `.env.example` to `.env`. |
+| Prisma cannot find `DATABASE_URL` | Ensure the root `.env` contains `DATABASE_URL="file:./dev.db"`. Do not use `.env.local` for Prisma CLI setup. |
+| Database schema is missing | Run `npm run prisma:generate` and `npm run prisma:migrate:deploy`. |
+| Login fails after setup | Run `npm run db:seed`, then retry the published demo credentials. |
+| Port 3000 is busy | Run `npm run dev -- --port 3001` and use the printed URL. |
+| Browser tests cannot launch | Run `npm run test:install`; Playwright downloads Chromium separately from npm packages. |
 
-**Do I need Git?**  
-No. Downloading the ZIP and extracting it works perfectly.
+## Reset and cleanup
 
-**Can I use the ZIP download instead of cloning?**  
-Yes. Extract the ZIP, open the folder in PowerShell/Terminal, and run the same commands listed above.
+Reset all local demo data:
 
-**Where do the downloaded files go?**  
-They live in the `public/files` folder so the fake checkout can deliver them instantly.
+```bash
+npm run reset:demo
+```
 
-**Can I rerun the setup command?**  
-Absolutely. The script is idempotent — it will reuse existing installs and only fix what’s missing.
+To rebuild from a completely clean local state, remove `node_modules`, `.next`, and `prisma/dev.db`, then rerun `npm run setup`. These paths are ignored by Git.
 
-**How do I stop the dev server?**  
-Press `Ctrl+C` in the terminal that's running `pnpm dev` / `npm run dev`.
+## Local file map
+
+- Environment: `.env` (private and Git-ignored)
+- Database: `prisma/dev.db` (generated and Git-ignored)
+- Browser-test database: `prisma/e2e.db` (generated, isolated, and Git-ignored)
+- Deliverable PDFs: `public/files/`
+- Managed logos: `var/uploads/logos/` (private runtime files served through `/api/uploads/...`)
+- Migrations: `prisma/migrations/`
+
+## Next steps
+
+- Use Settings → Reset demo data whenever you want the golden fixtures back.
+- Run `npm test`, `npm run lint`, and `npm run typecheck` before changing code.
+- Read [ARCHITECTURE.md](ARCHITECTURE.md) before replacing a provider or extending the event vocabulary.

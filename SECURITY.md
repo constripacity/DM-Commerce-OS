@@ -1,64 +1,65 @@
-# Security Operations Guide
+# Security policy
 
-DM Commerce OS ships with repeatable tooling to surface and clean sensitive data before publishing portfolio builds. This document explains how to run the scan, interpret reports, sanitize findings, and (optionally) sweep Git history.
+## Supported scope
 
-## 1. Run the Sensitive Data Scan
+Security fixes are applied to the current `main` branch. DM Commerce OS is a local development sandbox: it uses public demo credentials, SQLite, local files, and an explicit mock payment provider. Do not expose the demo unchanged to the public internet or use it to handle real payments, secrets, or customer data.
+
+## Report a vulnerability
+
+Please use GitHub's **Security → Report a vulnerability** private reporting flow for this repository. If private vulnerability reporting is unavailable, open a minimal issue asking the maintainer for a private contact channel; do not include exploit details, tokens, personal data, or a proof of concept in a public issue.
+
+Include, when possible:
+
+- affected revision and component;
+- impact and realistic attack conditions;
+- concise reproduction steps using synthetic data;
+- suggested mitigation; and
+- whether the issue is already public.
+
+Please allow a reasonable period for triage and remediation before disclosure. Never test against systems or data you do not own or have permission to assess.
+
+## Current trust boundaries
+
+- Dashboard pages and API reads require a valid signed, expiring session cookie.
+- State-changing routes also reject cross-site browser requests using Origin/Fetch Metadata checks.
+- The published demo password is not a production identity system.
+- Logo uploads require a bounded request length, are limited to 2 MB, use canonical generated names, validate PNG/JPEG/WebP structure, live outside `public`, and are served only through the authenticated current-logo route.
+- Product delivery is limited to regular PDF files under `public/files`.
+- Flow imports are limited to 100 KB and parsed through a versioned Zod schema.
+- Payment and delivery providers are local implementations; no external transaction occurs.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed data and request boundaries.
+
+## Repository hygiene
+
+Run the local scanner before publishing changes:
 
 ```bash
-pnpm scan:sensitive
-# or
 npm run scan:sensitive
 ```
 
-The scan inspects the working tree (excluding `.git`, `.next`, `node_modules`, `public/screenshots`, and `prisma/dev.db`) for:
+The scanner asks Git for tracked files plus untracked, non-ignored files, then applies the narrow project ignore/allow rules. A normal Git-ignored `.env`, database, build, test, log, backup, or dependency artifact is therefore not inspected, while a mistakenly tracked `.env*` is still scanned. The command fails closed outside a Git working tree instead of traversing unknown local state.
 
-- Private keys
-- JWT or opaque bearer tokens
-- Generic API keys / secrets / passwords
-- Environment variables accidentally committed (except `.env.example`)
-- Personal-looking emails (excluding `demo@local.test`)
-- Large or binary files needing manual review
-- CSV/JSON files with ≥100 rows containing PII columns
+On a completed scan it atomically writes Git-ignored `scan-report.json`, with owner-only `0600` permissions on POSIX, and prints the finding count. Text matches are represented by redacted labels and digest-bound locations; raw secret/email/token values are never written to the console or report. Exit `0` means no candidates, exit `2` means candidates were found, and exit `1` means the scan could not complete; `--no-fail` is available only for intentional report-only review. Do not commit the report even though its values are redacted.
 
-### Output
-
-- Console table of the top 50 hits (path, line, type, snippet)
-- `scan-report.json` with the full finding list (`matchText` contains the raw match)
-
-Use `--json` for machine-readable output, or `--pattern "<regex>"` to add a custom detector on demand.
-
-## 2. Sanitize Findings
-
-Review `scan-report.json` first. When ready:
+To sanitize an intentional export, first review the report, then use the narrowest appropriate mode:
 
 ```bash
-pnpm sanitize -- --redact          # replace inline secrets with REDACTED
-pnpm sanitize -- --delete --redact # delete non-essential files & redact code
-pnpm sanitize -- --interactive ... # prompt before each change
+npm run sanitize -- --redact
 ```
 
-Sanitization rules:
+Sanitization writes a timestamped local backup. If a real secret entered Git history, rotate it first; history rewriting alone does not invalidate a credential. The optional procedure is documented in [scripts/history-sweep.md](scripts/history-sweep.md).
 
-- Always creates backups under `.sanitized-backup/<timestamp>/...`
-- Keeps required demo assets (e.g., `/public/files/*.pdf`, `.env.example`, source files)
-- For code, only the secret value is replaced by `REDACTED`
+## Baseline checks
 
-## 3. Optional Git History Sweep
+Before submitting a security-related change, run:
 
-If a leaked secret ever landed in history, follow [`scripts/history-sweep.md`](scripts/history-sweep.md) to:
+```bash
+npm run lint
+npm run typecheck
+npm run validate:fixtures
+npm test
+npm run build
+```
 
-1. Create a safety branch
-2. Run gitleaks or truffleHog across history
-3. Rewrite commits with `git filter-repo`
-4. Force-push once validated
-
-## 4. Best Practices
-
-- Re-run `pnpm scan:sensitive` before every push (hooked to `prepush`)
-- Store real secrets outside the repository
-- Rotate any secret discovered in history, even after removal
-- Document incidents and mitigation steps for future reference
-
-## 5. Reporting
-
-For security concerns or findings needing escalation, add notes to `scan-report.json`, commit the sanitized state, and highlight risks in the PR description.
+Add a regression test that fails without the fix and uses only synthetic inputs.

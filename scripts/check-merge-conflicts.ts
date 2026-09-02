@@ -2,7 +2,9 @@
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 
-const MARKERS = ["<<<<<<<", "=======", ">>>>>>>"];
+// Git conflict markers occupy their own line. Looking for the raw character
+// sequences anywhere makes this checker flag documentation (and itself).
+const CONFLICT_MARKER = /^\s*(?:<{7}|={7}|>{7})(?:\s|$)/m;
 const IGNORE_DIRS = new Set([".git", "node_modules", ".next", "dist", "out", ".turbo"]);
 
 function scan(directory: string): string[] {
@@ -14,8 +16,10 @@ function scan(directory: string): string[] {
     if (stats.isDirectory()) {
       hits.push(...scan(fullPath));
     } else if (stats.isFile()) {
-      const content = readFileSync(fullPath, "utf8");
-      if (MARKERS.some((marker) => content.includes(marker))) {
+      const bytes = readFileSync(fullPath);
+      if (bytes.includes(0)) continue;
+      const content = bytes.toString("utf8");
+      if (CONFLICT_MARKER.test(content)) {
         hits.push(fullPath);
       }
     }
@@ -30,7 +34,7 @@ if (conflicts.length) {
   for (const file of conflicts) {
     console.error(` - ${file}`);
   }
-  console.error("\nResolve conflicts (remove <<<<<<<, =======, >>>>>>>) before committing or running CI.\n");
+  console.error("\nResolve the standard Git conflict-marker lines before committing or running CI.\n");
   process.exit(1);
 }
 

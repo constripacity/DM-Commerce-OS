@@ -59,7 +59,7 @@ interface PlannerOptions {
 export function CampaignsTab() {
   const { toast } = useToast();
   const { data: campaignsData, error: campaignsError, isLoading, mutate } = useCampaigns(true);
-  const campaigns = campaignsData ?? [];
+  const campaigns = React.useMemo(() => campaignsData ?? [], [campaignsData]);
   const loading = !campaignsData && isLoading;
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [dialogMode, setDialogMode] = React.useState<"create" | "edit">("create");

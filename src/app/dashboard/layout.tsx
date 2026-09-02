@@ -13,7 +13,10 @@ export const revalidate = 0;
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [products, orders] = await Promise.all([
     prisma.product.findMany(),
-    prisma.order.findMany({ include: { product: true }, orderBy: { createdAt: "desc" } }),
+    prisma.order.findMany({
+      include: { product: true, campaign: true, customer: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   return <DashboardShell initialProducts={products} initialOrders={orders}>{children}</DashboardShell>;

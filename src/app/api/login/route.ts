@@ -3,8 +3,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { loginSchema } from "@/lib/validators";
 import { setSessionCookie } from "@/lib/auth";
+import { isTrustedMutationRequest } from "@/lib/security/request";
 
 export async function POST(request: Request) {
+  if (!isTrustedMutationRequest(request)) {
+    return NextResponse.json({ error: "Cross-origin mutation rejected" }, { status: 403 });
+  }
   const payload = await request.json().catch(() => null);
   if (!payload) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
@@ -32,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    setSessionCookie();
+    await setSessionCookie();
   } catch (error) {
     console.error("Failed to set session cookie", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
