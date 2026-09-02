@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readdir, stat } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 import { requireAuthCookie } from "@/lib/auth";
 
@@ -10,14 +10,17 @@ export async function GET(request: Request) {
 
   try {
     const filesDir = path.join(process.cwd(), "public", "files");
-    const entries = await readdir(filesDir);
+    const entries = await readdir(filesDir, { withFileTypes: true });
     const results = await Promise.all(
       entries
-        .filter((file) => file.endsWith(".pdf"))
-        .map(async (file) => {
-          const filePath = path.join(filesDir, file);
-          const fileStat = await stat(filePath);
-          return { path: `/files/${file}`, size: fileStat.size };
+        .filter(
+          (entry) =>
+            entry.isFile() && /^[A-Za-z0-9][A-Za-z0-9._-]*\.pdf$/.test(entry.name),
+        )
+        .map(async (entry) => {
+          const filePath = path.join(filesDir, entry.name);
+          const fileStat = await lstat(filePath);
+          return { path: `/files/${entry.name}`, size: fileStat.size };
         })
     );
     return NextResponse.json(results);

@@ -1,197 +1,150 @@
-# DM Commerce OS — Offline DM-to-Checkout Simulator
+# DM Commerce OS
 
-DM Commerce OS is a self-contained Next.js application that demos how a creator can sell a digital download without touching any external API. It ships with demo auth, a DM simulator, fake checkout that creates orders, analytics, and brand settings — all backed by SQLite and Prisma seed data.
+**Run an entire inbound DM-to-digital-delivery loop on your laptop—no API keys, payment account, or hosted database required.**
 
-## Overview
+DM Commerce OS is a local-first reference application for creators and developers who want to inspect how a social keyword becomes a deterministic conversation, attributed checkout, order, file delivery, and measurable event trail. The golden demo is seeded, resettable, and backed by SQLite.
 
-- **End-to-end funnel:** Campaign posts drive a DM keyword that activates scripted auto-replies, leading to checkout and delivery.
-- **DM Studio:** Chat simulator powered by a state machine that stitches together pitch, qualify, checkout, objection, and delivery scripts.
-- **Products & orders:** CRUD interface with validation and instant fake checkout that unlocks the downloadable PDF.
-- **Campaign tooling:** Manage campaigns and export CSV content (10 posts + 10 stories) with hooks and CTA "DM {keyword}".
-- **Analytics & settings:** Seeded funnel metrics blended with live order data plus branded dashboard theming with logo upload.
-- **Offline & educational:** SQLite database with Prisma seed script, no third-party APIs, and Playwright coverage for the primary happy path.
+![DM Commerce OS dashboard](https://github.com/user-attachments/assets/f2ac3fea-16cf-4fd0-a170-e1b06e5730f6)
 
-![part 1](https://github.com/user-attachments/assets/f2ac3fea-16cf-4fd0-a170-e1b06e5730f6)
+![DM Commerce OS walkthrough](https://github.com/user-attachments/assets/6fcaf44d-28f7-4481-8dfd-3af7cdcb382a)
 
-![ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/6fcaf44d-28f7-4481-8dfd-3af7cdcb382a)
+## Why this project is useful
 
+- **Complete local loop:** inbound keyword → flow decision → checkout → order → PDF delivery → campaign analytics.
+- **Inspectable decisions:** a deterministic state machine and append-only commerce events make the demo explainable.
+- **Portable automation:** validated, versioned JSON flow packs can be exported and imported without copying database rows.
+- **Swappable boundaries:** typed payment and delivery provider interfaces isolate the explicit mock/local implementations.
+- **Credible demo data:** six attributed customers and orders, two campaigns, coupons, objections, and seven days of event-backed analytics are available after one seed command.
+- **No-key start:** demo auth, SQLite, mock payment authorization, and local files work without third-party services.
 
-## Tech Stack
+This is a development sandbox and reference architecture, not a production payment processor or social-network integration.
 
-- **Web:** Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, lucide-react  
-- **Server:** Next.js route handlers, Zod validation, bcryptjs for the demo password  
-- **Data:** Prisma ORM + SQLite (`prisma/dev.db`)  
-- **Testing:** Playwright end-to-end suite
+## Quick start
 
-## Beginner Install Kit
-
-See docs/BEGINNER-GUIDE.md for a guided setup script, troubleshooting, and screenshots. The one-command guided install (recommended) runs env setup, installs dependencies, applies migrations and seeds the demo data.
-
-### One-command install & launch
+Requirements: Node.js 20.19+, 22.13+, or 24+ and npm (use an active LTS line).
 
 ```bash
-# From the project folder
-pnpm run setup
-# or
+git clone https://github.com/constripacity/DM-Commerce-OS.git
+cd DM-Commerce-OS
 npm run setup
-```
-
-Then start the dev server:
-
-```bash
-pnpm dev
-# or
 npm run dev
 ```
 
-Visit http://localhost:3000/login and use the demo credentials below.
+Open [http://localhost:3000/login](http://localhost:3000/login) and sign in with:
 
-> 🔐 If you choose manual setup, copy `.env.example` to `.env.local`, set `APP_SECRET` to any long random string, and make sure `DATABASE_URL="file:./prisma/dev.db"` is present before running Prisma commands.
+- Email: `demo@local.test`
+- Password: `demo123`
 
-### Windows Setup (Manual)
+`npm run setup` installs the locked dependencies before loading the TypeScript setup helper, creates a private `.env`, generates Prisma Client, applies migrations, and seeds the golden demo. It is safe to rerun.
 
-If you are on Windows, we recommend following our detailed [Windows Setup Guide](docs/WINDOWS-SETUP.md) to avoid common dependency and database issues.
-
-Quick summary:
-1.  **Install:** `npm install --legacy-peer-deps`
-2.  **Env:** Set `DATABASE_URL="file:./dev.db"` in `.env`
-3.  **Init:** `npm run prisma:generate && npx prisma migrate dev --name init && npm run db:seed`
-4.  **Run:** `npm run dev`
-
-### Manual install (optional)
+For a manual installation:
 
 ```bash
-# Install dependencies
-pnpm install
-# or
-npm install
-
-# Prepare environment
-cp .env.example .env.local
-
-# Generate Prisma client & apply migrations
-pnpm prisma generate
-pnpm prisma migrate dev --name init
-
-# Seed demo data
-pnpm db:seed
-
-# Run the app
-pnpm dev
+cp .env.example .env
+# Replace APP_SECRET with a random string at least 32 characters long.
+npm ci
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run db:seed
+npm run dev
 ```
 
-Replace `pnpm` with `npm run` / `npm exec` equivalents if you do not have pnpm installed.
+`DATABASE_URL="file:./dev.db"` is resolved by Prisma relative to `prisma/schema.prisma`, so the generated database is `prisma/dev.db`.
 
-### Demo Credentials
+See [the beginner guide](docs/BEGINNER-GUIDE.md) or [Windows setup](docs/WINDOWS-SETUP.md) for troubleshooting.
 
-- **Email:** demo@local.test  
-- **Password:** demo123
+## Golden demo
 
-## Key Features
+After seeding, try this path:
 
-| Area            | Highlights |
-| --------------- | ---------- |
-| Products        | CRUD with Zod validation, price helper, toast feedback, and simulated checkout modal |
-| Orders          | Filterable table with date bounds and instant download link pointing to `/public/files/*.pdf` |
-| DM Studio       | Campaign/product selectors, script previews with variables, state-machine auto replies, checkout modal, and delivery follow-up |
-| Campaigns       | CRUD + CSV export (10 posts & 10 stories) covering transformations, quick tips, myths, and checklists |
-| Scripts Library | Categorized templates with variable chips ({{product}}, {{price}}, {{keyword}}) and live preview |
-| Analytics       | Seeded funnel metrics plus live order totals, sparkline SVG chart, and pipeline summary |
-| Settings        | Brand name + color editor and local logo upload saved to `/public/uploads` |
+1. Open **DM Studio**, select the Creator DM Push campaign and Creator DM Guide product.
+2. Send `GUIDE`, then `yes`, then `how much?`.
+3. Follow **Simulate checkout** to Products.
+4. Enter a buyer and use coupon `LAUNCH20`.
+5. Inspect the attributed, price-snapshotted order and local PDF in **Orders**.
+6. Open **Analytics** to see the new conversation, checkout, order, delivery, revenue, and campaign attribution derived from persisted events.
+7. Use **Scripts → Export flow** to inspect the portable automation JSON.
 
-## Available Scripts
+Use **Settings → Reset demo data** to atomically remove local catalog/conversation/order/config changes and restore the fixtures. The `npm run reset:demo` command performs the same deterministic restore through Prisma's migrate-reset workflow. Both are intentionally destructive.
 
-| Command                        | Description                                                                 |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `npm run setup` / `pnpm run setup` | Guided install (env, deps, migrations, seed)                                |
-| `npm run dev` / `pnpm dev`          | Start Next.js in development mode                                           |
-| `npm run build` / `npm start`       | Production build & start                                                    |
-| `npm run lint`                      | Run Next.js linting                                                         |
-| `npm run typecheck`                 | Run TypeScript without emitting files                                       |
-| `npm run prisma:generate`           | Generate the Prisma client                                                  |
-| `npm run prisma:migrate`            | Run `prisma migrate dev`                                                    |
-| `npm run db:seed`                   | Execute `prisma/seed.ts` via `tsx`                                          |
-| `npm run test:install`              | Install Playwright browser dependencies                                     |
-| `npm run test:e2e`                  | Run the Playwright flow (spins up dev server automatically)                 |
-| `npm run test:e2e:ui`               | Launch the Playwright test runner UI                                        |
-| `npm run scan:sensitive`            | Scan the repo for secrets before pushing                                    |
-| `npm run sanitize`                  | Strip sensitive data from exported conversations                            |
+## What is real and what is simulated
 
-## Testing
+| Capability | Implementation |
+| --- | --- |
+| Session boundary | Real signed, expiring, HTTP-only cookie; local demo credentials |
+| Conversation decisions | Real deterministic state machine and persisted messages/events |
+| Catalog, customers, orders, coupons | Real Prisma persistence in local SQLite |
+| Campaign attribution and analytics | Real calculations over persisted orders and append-only events |
+| Payment | Explicit `MockPaymentProvider`; no funds move |
+| Delivery | `LocalFileDeliveryProvider` validates and returns a local PDF path |
+| Social inbox, email, webhooks | Not integrated |
 
-Playwright global setup resets the database with:
+## Architecture
 
-```bash
-npx prisma migrate reset --force --skip-generate
-# then
-pnpm db:seed
+```mermaid
+flowchart TD
+    A["DM Studio"] --> B["Deterministic flow"]
+    B --> C["Local checkout"]
+    C --> D["Order + delivery"]
+    B --> E["Append-only events"]
+    C --> E
+    D --> E
+    E --> F["Analytics + attribution"]
 ```
 
-The main e2e scenario covers:
-- Logging in with the demo account
-- Creating a product
-- Running the DM Studio flow (keyword → qualify → checkout → delivery)
-- Simulating checkout and verifying the order download link
+The App Router UI calls authenticated route handlers. Business rules live in `src/lib`: the flow state machine, coupon pricing, checkout orchestration, typed providers, event vocabulary, and flow-pack validation. Prisma owns the local persistence boundary. Read [the architecture guide](docs/ARCHITECTURE.md) for module and trust-boundary details.
 
-View or edit the test at `tests/e2e.spec.ts`.
+## Features
 
-## Data & Seeds
+| Area | Current behavior |
+| --- | --- |
+| DM Studio | Campaign/product context, deterministic intents, objection handling, persisted messages and stage events |
+| Checkout | Customer upsert, coupon rules, immutable price snapshots, typed mock payment/local delivery adapters |
+| Orders | Status, attribution, discounts, totals, customer identity, verified local download |
+| Analytics | Rolling seven-day funnel, revenue, product/campaign mix, objections, median time to checkout |
+| Flow packs | 100 KB-capped, Zod-validated, versioned JSON import/export |
+| Catalog/campaigns/scripts | Authenticated CRUD with server-side validation |
+| Settings | Brand settings and signature-checked PNG/JPEG/WebP logos in private runtime storage, served by an authenticated route (2 MB maximum) |
+| Demo reset | Atomic deterministic products, campaigns, scripts, coupon, settings, customers, orders, and events |
 
-`prisma/seed.ts` provisions:
-- Demo user with bcryptjs-hashed password (`demo123`)
-- Two products with local PDFs (`/public/files/creator-guide.pdf`, `/public/files/checklist.pdf`)
-- Six DM scripts spanning pitch, qualify, objections, checkout, and delivery
-- One campaign with keyword `GUIDE`
-- Settings row for brand defaults (`DM Commerce OS`, `#6366F1`)
-- Six historical orders to power analytics trend lines
+## Development commands
 
-Run `npx prisma migrate reset --force` followed by `npm run db:seed` (or the `pnpm` equivalents) anytime you want to rebuild the SQLite database.
+| Command | Purpose |
+| --- | --- |
+| `npm run setup` | Fresh-clone environment, install, migrate, and seed |
+| `npm run dev` | Start the local development server |
+| `npm run lint` | Run the Next.js ESLint configuration |
+| `npm run typecheck` | Run TypeScript without emitting files |
+| `npm test` | Run Vitest unit and regression tests |
+| `npm run build` | Create the production Next.js build |
+| `npm run smoke` | Probe auth, primary APIs, flow export, and cross-origin rejection against a running server |
+| `npm run smoke:production` | Destructively exercise runtime logo delivery and deterministic reset against a disposable seeded production server |
+| `npm run validate:fixtures` | Validate seeded PDFs structurally and with `pdfinfo` when available |
+| `npm run test:install` | Install Playwright browsers |
+| `npm run test:e2e` | Reset/seed only `prisma/e2e.db` and exercise the browser golden path |
+| `npm run reset:demo` | Reset migrations and reseed local fixtures |
+| `npm run scan:sensitive` | Scan Git-visible source for likely sensitive material and emit a redacted private report |
 
-## Deploy to Render (Postgres)
+## Security posture
 
-Render offers a managed Postgres database and web services that map cleanly to Prisma. To deploy this project on Render:
+All application-data write routes require the signed demo session and reject cross-site browser mutations; login and logout are the origin-checked session-boundary exceptions. Redirect targets are constrained to the dashboard, flow imports are size/schema limited, downloads are allow-listed local PDFs, and logo uploads use generated names, bounded content signatures, private runtime storage, and an authenticated delivery route. A legacy service worker is actively removed so private APIs and dashboards are never replayed from its cache. See [SECURITY.md](SECURITY.md) for reporting and scope.
 
-1) **Create Render Postgres** and copy the **Internal Database URL** (postgres://...).  
-2) **Create a Render Web Service** pointing to this repo/branch.  
-3) **Set environment variables:**  
-   - `DATABASE_URL` = the Internal Database URL from Postgres  
-   - `APP_SECRET` = any long random string  
-4) **Build Command:** `npm ci && npm run prisma:generate && npm run build`  
-5) **Pre-Deploy Command:** `npx prisma migrate deploy`  
-6) **Start Command:** `npm run start`  
-7) **Optional seed (run once or behind a flag):** `npx prisma db seed`
+The demo password is public by design. Change or remove demo auth before adapting this project for any shared or internet-facing environment.
 
-These steps match Render’s Postgres guidance and Prisma’s recommended deploy workflow.
+## Project status and limits
 
-## Screenshots to Capture
+- SQLite and local files are intentional; horizontal deployment is not supported.
+- Payment authorization and delivery are adapters backed by mock/local implementations.
+- There is no live Instagram, TikTok, email, tax, refund, inventory, or webhook integration.
+- Event properties are JSON strings in SQLite; they are validated at write sites, not by the database.
+- The legacy `DM Commerce Latest UI/` snapshot remains for provenance but is excluded from the active TypeScript build.
 
-Place exported images in `/public/screenshots/`:
-- login.png
-- dashboard.png
-- products.png
-- dm-studio.png
-- checkout.png
-- orders.png
-- analytics.png
+See [the revival audit](docs/REVIVAL_AUDIT.md), [revival changelog](docs/REVIVAL_CHANGELOG.md), and [next 18 commits](docs/NEXT_20_COMMITS.md) for verified state and ordered follow-up work.
 
-## Loom Script
+## Contributing
 
-A 90-second narration script lives in `docs/loom-script.md`.
-
-## What’s Simulated vs Real
-
-| Real                                                       | Simulated                                   |
-|------------------------------------------------------------|---------------------------------------------|
-| Authenticated session via signed HTTP-only cookie          | Payments, email delivery, social DM APIs    |
-| File delivery via local `/public/files/*`                  | External storage or CDN                      |
-| Prisma-backed persistence                                  | Any third-party analytics or webhook integrations |
-
-## What I Learned
-
-- Designing a reusable DM state machine that plugs in campaign/product variables cleanly.
-- Pairing seeded analytics with live data so demos feel dynamic while remaining offline.
-- Using Playwright with Next.js App Router by spinning up the dev server through webServer config and seeding via global setup.
+Bug reports and focused pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), include tests for behavior changes, and keep the default path offline and no-key.
 
 ## License
 
-MIT License — see the LICENSE file if present. This project is built for portfolio and educational purposes only; it is not intended for production commerce.
+[MIT](LICENSE)

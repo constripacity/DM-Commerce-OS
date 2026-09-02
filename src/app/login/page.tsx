@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/lib/validators";
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +47,11 @@ export default function LoginPage() {
       return;
     }
 
-    const redirectTo = searchParams.get("from") ?? "/dashboard";
-    router.push(redirectTo as any);
+    const requestedPath = searchParams.get("from");
+    const redirectTo = requestedPath?.startsWith("/dashboard")
+      ? requestedPath
+      : "/dashboard";
+    router.push(redirectTo as Route);
   };
 
   return (
@@ -142,8 +146,12 @@ export default function LoginPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-slate-200">Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
+                        <div className="relative">
+                          {/* FormControl (a Radix Slot) must wrap the Input directly so
+                              its generated id lands on the input and the FormLabel's
+                              htmlFor actually points at it — otherwise the field has no
+                              accessible label. */}
+                          <FormControl>
                             <Input
                               placeholder="demo123"
                               type={showPassword ? "text" : "password"}
@@ -151,17 +159,17 @@ export default function LoginPage() {
                               className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400 focus-visible:ring-blue-300 focus-visible:ring-offset-slate-900"
                               {...field}
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute inset-y-0 right-0 mr-1 flex h-full items-center px-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white"
-                              onClick={() => setShowPassword((value) => !value)}
-                            >
-                              {showPassword ? "Hide" : "Show"}
-                            </Button>
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute inset-y-0 right-0 mr-1 flex h-full items-center px-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white"
+                            onClick={() => setShowPassword((value) => !value)}
+                          >
+                            {showPassword ? "Hide" : "Show"}
+                          </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -180,5 +188,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" aria-label="Loading login" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

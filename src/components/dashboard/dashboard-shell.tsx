@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
@@ -43,7 +44,7 @@ import { SimulationCompletionModal } from "@/components/simulation/SimulationCom
 /* ------------------------------------------------------------------ */
 
 interface NavItem {
-  href: string;
+  href: Route;
   label: string;
   icon: React.ElementType;
 }
@@ -133,7 +134,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href as any}
+                    href={item.href}
                     data-sim={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                     title={collapsed ? item.label : undefined}
                     className={cn(
@@ -222,7 +223,7 @@ export function DashboardShell({
         id: `dashboard-${item.href}`,
         label: item.label,
         section: "Navigate",
-        run: () => router.push(item.href as any),
+        run: () => router.push(item.href),
       })),
     [router]
   );
@@ -246,7 +247,7 @@ export function DashboardShell({
       for (const href of targets) {
         if (cancelled) break;
 
-        router.prefetch(href as any);
+        router.prefetch(href);
 
         try {
           await fetch(href, {
@@ -261,10 +262,16 @@ export function DashboardShell({
       }
     };
 
-    const win = window as typeof globalThis;
+    const win = window as Window & {
+      requestIdleCallback?: (
+        callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void,
+        options?: { timeout: number },
+      ) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
 
-    if ("requestIdleCallback" in win) {
-      const idleId = (win as any).requestIdleCallback(
+    if (win.requestIdleCallback) {
+      const idleId = win.requestIdleCallback(
         () => {
           void warmRoutes();
         },
@@ -273,7 +280,7 @@ export function DashboardShell({
 
       return () => {
         cancelled = true;
-        (win as any).cancelIdleCallback?.(idleId);
+        win.cancelIdleCallback?.(idleId);
       };
     }
 

@@ -6,7 +6,7 @@ import { CheckCircle2, RotateCcw } from "lucide-react";
 import { useSimulation } from "./SimulationProvider";
 
 export function SimulationCompletionModal() {
-  const { isRunning, currentStepIndex, totalSteps, start } = useSimulation();
+  const { isRunning, currentStepIndex, start } = useSimulation();
   const [show, setShow] = React.useState(false);
   const prevRunning = React.useRef(false);
 

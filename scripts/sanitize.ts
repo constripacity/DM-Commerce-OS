@@ -4,6 +4,8 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import readline from "node:readline/promises";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { stdin as input, stdout as output } from "node:process";
 
 type ChalkLike = {
@@ -12,12 +14,16 @@ type ChalkLike = {
   red: (value: string) => string;
 };
 
-interface FindingEntry {
+export interface FindingEntry {
   path: string;
   line: number | null;
   matchType: string;
   snippet: string;
-  matchText: string;
+  redaction?: {
+    offset: number;
+    length: number;
+    sourceSha256: string;
+  };
 }
 
 interface ScanReport {
@@ -29,8 +35,8 @@ async function loadChalk(): Promise<ChalkLike> {
   const identity = (value: string) => value;
   try {
     const mod = await import("chalk");
-    const instance = (mod as any).default ?? (mod as any);
-    const wrap = (method: string) => {
+    const instance = mod.default;
+    const wrap = (method: keyof ChalkLike) => {
       const fn = instance?.[method];
       if (typeof fn === "function") {
         return fn.bind(instance);
@@ -45,7 +51,7 @@ async function loadChalk(): Promise<ChalkLike> {
       cyan: wrap("cyan"),
       red: wrap("red"),
     };
-  } catch (error) {
+  } catch {
     return { green: identity, cyan: identity, red: identity };
   }
 }
@@ -82,38 +88,83 @@ function isProtectedPath(filePath: string) {
   );
 }
 
-async function ensureBackup(filePath: string, timestamp: string) {
-  const backupRoot = path.join(process.cwd(), ".sanitized-backup", timestamp);
+async function ensureBackup(filePath: string, timestamp: string, root: string) {
+  const backupRoot = path.join(root, ".sanitized-backup", timestamp);
   const target = path.join(backupRoot, filePath);
-  await fsp.mkdir(path.dirname(target), { recursive: true });
-  await fsp.copyFile(path.join(process.cwd(), filePath), target);
+  await fsp.mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+  if (process.platform !== "win32") {
+    await fsp.chmod(backupRoot, 0o700);
+    await fsp.chmod(path.dirname(target), 0o700);
+  }
+  await fsp.copyFile(path.join(root, filePath), target);
+  if (process.platform !== "win32") {
+    await fsp.chmod(target, 0o600);
+  }
 }
 
-async function redactFile(filePath: string, matches: FindingEntry[], timestamp: string) {
-  const fullPath = path.join(process.cwd(), filePath);
-  const content = await fsp.readFile(fullPath, "utf8");
+export async function redactFile(
+  filePath: string,
+  matches: FindingEntry[],
+  timestamp: string,
+  root: string = process.cwd(),
+) {
+  const fullPath = path.join(root, filePath);
+  const source = await fsp.readFile(fullPath);
+  const content = source.toString("utf8");
+  const sourceSha256 = createHash("sha256").update(source).digest("hex");
   let updated = content;
 
-  for (const finding of matches) {
-    const escaped = finding.matchText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(escaped, "g");
-    updated = updated.replace(pattern, (segment) => {
-      if (segment.includes("=")) {
-        return segment.replace(/=(\s*)[^\s]+/, "=$1REDACTED");
-      }
-      const replacedQuotes = segment.replace(/['\"][^'\"]+['\"]/g, (value) => {
-        const quote = value.startsWith("'") ? "'" : '"';
-        return `${quote}REDACTED${quote}`;
-      });
-      if (replacedQuotes !== segment) {
-        return replacedQuotes;
-      }
-      return "REDACTED";
-    });
+  const spans = matches.flatMap((finding) => {
+    const location = finding.redaction;
+    if (!location) return [];
+    return [{ ...location, matchType: finding.matchType }];
+  });
+
+  if (spans.length === 0) {
+    return false;
+  }
+
+  for (const span of spans) {
+    if (span.sourceSha256 !== sourceSha256) {
+      throw new Error(`${filePath} changed after the scan; rerun scan:sensitive before redacting.`);
+    }
+    if (
+      !Number.isSafeInteger(span.offset) ||
+      !Number.isSafeInteger(span.length) ||
+      span.offset < 0 ||
+      span.length < 1 ||
+      span.offset + span.length > content.length
+    ) {
+      throw new Error(`Invalid redaction span for ${filePath}; rerun scan:sensitive.`);
+    }
+  }
+
+  const uniqueSpans = Array.from(
+    new Map(spans.map((span) => [`${span.offset}:${span.length}`, span])).values(),
+  ).sort((a, b) => a.offset - b.offset);
+
+  for (let index = 1; index < uniqueSpans.length; index += 1) {
+    const previous = uniqueSpans[index - 1];
+    const current = uniqueSpans[index];
+    if (current.offset < previous.offset + previous.length) {
+      throw new Error(`Overlapping redaction spans for ${filePath}; review the report manually.`);
+    }
+  }
+
+  for (const span of uniqueSpans.reverse()) {
+    const segment = updated.slice(span.offset, span.offset + span.length);
+    let replacement = "REDACTED";
+    if (span.matchType === "env-line" && segment.includes("=")) {
+      replacement = `${segment.slice(0, segment.indexOf("=") + 1)}REDACTED`;
+    } else if (span.matchType === "api-key") {
+      const quoted = segment.replace(/(['"])[^'"]+\1/g, "$1REDACTED$1");
+      replacement = quoted === segment ? "REDACTED" : quoted;
+    }
+    updated = `${updated.slice(0, span.offset)}${replacement}${updated.slice(span.offset + span.length)}`;
   }
 
   if (updated !== content) {
-    await ensureBackup(filePath, timestamp);
+    await ensureBackup(filePath, timestamp, root);
     await fsp.writeFile(fullPath, updated, "utf8");
     return true;
   }
@@ -122,7 +173,7 @@ async function redactFile(filePath: string, matches: FindingEntry[], timestamp: 
 }
 
 async function deleteFile(filePath: string, timestamp: string) {
-  await ensureBackup(filePath, timestamp);
+  await ensureBackup(filePath, timestamp, process.cwd());
   await fsp.unlink(path.join(process.cwd(), filePath));
 }
 
@@ -203,4 +254,7 @@ async function main() {
   }
 }
 
-void main();
+const currentFile = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === currentFile) {
+  void main();
+}

@@ -17,14 +17,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-interface OrderRow extends OrderWithProduct {
-  status: "demo" | "delivered";
-}
+type OrderStatus = "pending" | "completed" | "delivered" | "failed";
+type OrderRow = Omit<OrderWithProduct, "status"> & { status: OrderStatus };
 
-function deriveStatus(order: OrderWithProduct): "demo" | "delivered" {
-  const created = new Date(order.createdAt);
-  const hoursOld = (Date.now() - created.getTime()) / 1000 / 3600;
-  return hoursOld <= 24 ? "demo" : "delivered";
+function deriveStatus(order: OrderWithProduct): OrderStatus {
+  return ["pending", "completed", "delivered", "failed"].includes(order.status)
+    ? (order.status as OrderStatus)
+    : "completed";
 }
 
 export function OrdersTab() {
@@ -82,7 +81,10 @@ export function OrdersTab() {
         cell: ({ row }) => (
           <div>
             <p className="font-medium">{row.original.product.title}</p>
-            <p className="font-mono text-xs text-muted-foreground/70">{formatCurrencyFromCents(row.original.product.priceCents)}</p>
+            <p className="font-mono text-xs text-muted-foreground/70">{formatCurrencyFromCents(row.original.totalCents)}</p>
+            {row.original.campaign ? (
+              <p className="text-xs text-muted-foreground/70">via {row.original.campaign.name}</p>
+            ) : null}
           </div>
         ),
       },
@@ -91,13 +93,13 @@ export function OrdersTab() {
         header: "Status",
         cell: ({ row }) => (
           <Badge
-            variant={row.original.status === "demo" ? "secondary" : "default"}
+            variant={row.original.status === "delivered" ? "default" : "secondary"}
             className={cn(
               "text-[10px]",
               row.original.status === "delivered" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
             )}
           >
-            {row.original.status === "demo" ? "Demo" : "Delivered"}
+            {row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
           </Badge>
         ),
       },
@@ -138,7 +140,7 @@ export function OrdersTab() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
-          <p className="mt-1 text-sm text-muted-foreground/70">Inspect the fake checkout trail and download purchased files instantly.</p>
+          <p className="mt-1 text-sm text-muted-foreground/70">Inspect the local checkout trail, price snapshot, attribution, and delivered file.</p>
         </div>
       </div>
 
@@ -255,7 +257,7 @@ export function OrdersTab() {
                     <EmptyState
                       icon={Calendar}
                       title="No orders yet"
-                      description="Trigger a fake checkout from the Products tab to see the fulfillment view."
+                      description="Run a simulated local checkout from Products to see the fulfillment view."
                       action={
                         <Button className="mt-2" variant="outline" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
                           Back to overview
@@ -292,7 +294,7 @@ export function OrdersTab() {
             <>
               <DrawerHeader data-sim="order-detail-drawer">
                 <DrawerTitle>Order details</DrawerTitle>
-                <DrawerDescription>Manual delivery preview for your fake checkout flow.</DrawerDescription>
+                <DrawerDescription>Delivery details from the simulated local checkout flow.</DrawerDescription>
               </DrawerHeader>
               <div className="grid gap-4 px-6 py-4">
                 <div className="rounded-lg border border-border/40 bg-background/40 p-4">
@@ -303,19 +305,24 @@ export function OrdersTab() {
                 <div className="rounded-lg border border-border/40 bg-background/40 p-4">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Product</p>
                   <p className="mt-1 text-sm font-medium">{detailOrder.product.title}</p>
-                  <p className="font-mono text-sm text-muted-foreground/70">{formatCurrencyFromCents(detailOrder.product.priceCents)}</p>
+                  <p className="font-mono text-sm text-muted-foreground/70">{formatCurrencyFromCents(detailOrder.totalCents)}</p>
+                  {detailOrder.discountCents > 0 ? (
+                    <p className="text-xs text-emerald-500">
+                      {formatCurrencyFromCents(detailOrder.discountCents)} discount ({detailOrder.couponCode})
+                    </p>
+                  ) : null}
                 </div>
                 <div className="rounded-lg border border-border/40 bg-background/40 p-4">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">Created</p>
                   <p className="mt-1 text-sm">{formatDate(detailOrder.createdAt)}</p>
                   <Badge
-                    variant={detailOrder.status === "demo" ? "secondary" : "default"}
+                    variant={detailOrder.status === "delivered" ? "default" : "secondary"}
                     className={cn(
                       "mt-2 w-fit text-[10px]",
                       detailOrder.status === "delivered" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                     )}
                   >
-                    {detailOrder.status === "demo" ? "Demo" : "Delivered"}
+                    {detailOrder.status.charAt(0).toUpperCase() + detailOrder.status.slice(1)}
                   </Badge>
                 </div>
               </div>

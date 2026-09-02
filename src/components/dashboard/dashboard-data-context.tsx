@@ -1,10 +1,14 @@
 "use client";
 
 import * as React from "react";
-import type { Order, Product } from "@prisma/client";
+import type { Campaign, Customer, Order, Product } from "@prisma/client";
 
 export type { Product };
-export type OrderWithProduct = Order & { product: Product };
+export type OrderWithProduct = Order & {
+  product: Product;
+  campaign?: Campaign | null;
+  customer?: Customer;
+};
 
 interface DashboardDataContextValue {
   products: Product[];

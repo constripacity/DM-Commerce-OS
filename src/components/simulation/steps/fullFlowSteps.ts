@@ -1,5 +1,7 @@
+import type { Route } from "next";
+
 export type SimulationAction =
-  | { type: "navigate"; path: string }
+  | { type: "navigate"; path: Route }
   | { type: "click" }
   | { type: "type"; text: string; speed?: number }
   | { type: "hover" }
@@ -175,7 +177,7 @@ export function generateFlowSteps(): SimulationStep[] {
       id: "nav-products",
       phase: "Checkout",
       narration:
-        "Now let's run a fake checkout. Heading to the Products page.",
+        "Now let's run a simulated local checkout. Heading to the Products page.",
       target: "nav-products",
       action: { type: "click" },
       delayAfter: 800,

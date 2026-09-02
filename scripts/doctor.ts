@@ -10,6 +10,7 @@ import {
   detectPackageManager,
   findProjectRoot,
   commandExists,
+  parseAppSecret,
   PackageManagerInfo,
 } from "./utils/env";
 
@@ -31,8 +32,10 @@ export interface DoctorResult {
   isGitRepo: boolean;
 }
 
-const REQUIRED_NODE_MAJOR = 18;
+const REQUIRED_NODE_MAJOR = 20;
+const REQUIRED_NODE_MINOR = 19;
 const DEFAULT_PORT = 3000;
+const APP_SECRET_PLACEHOLDER = "CHANGE_ME_TO_A_LONG_RANDOM_STRING";
 
 function formatPlatform(): string {
   const platform = os.platform();
@@ -55,7 +58,7 @@ async function checkPortAvailability(port: number): Promise<boolean> {
     server.once("error", () => {
       try {
         server.close();
-      } catch (err) {
+      } catch {
         // ignore
       }
       resolve(false);
@@ -106,10 +109,20 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
     const osName = formatPlatform();
     const shellName = process.env.SHELL ?? process.env.ComSpec ?? "unknown";
     const nodeVersion = process.version;
-    const nodeMajor = parseInt(nodeVersion.replace("v", "").split(".")[0] ?? "0", 10);
-    if (Number.isNaN(nodeMajor) || nodeMajor < REQUIRED_NODE_MAJOR) {
+    const [nodeMajor, nodeMinor] = nodeVersion
+      .replace("v", "")
+      .split(".")
+      .slice(0, 2)
+      .map((part) => parseInt(part, 10));
+    const nodeSupported =
+      !Number.isNaN(nodeMajor) &&
+      !Number.isNaN(nodeMinor) &&
+      ((nodeMajor === REQUIRED_NODE_MAJOR && nodeMinor >= REQUIRED_NODE_MINOR) ||
+        (nodeMajor === 22 && nodeMinor >= 13) ||
+        nodeMajor >= 24);
+    if (!nodeSupported) {
       errors.push(
-        `Node.js ${REQUIRED_NODE_MAJOR}+ is required. You have ${nodeVersion}. Download the latest LTS release from https://nodejs.org/.`
+        `Use Node.js 20.19+, 22.13+, or 24+. You have ${nodeVersion}. Download an active LTS release from https://nodejs.org/.`
       );
     }
 
@@ -123,9 +136,16 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
       warnings.push("Git was not found. That's OK if you downloaded the ZIP.");
     }
 
-    const opensslAvailable = commandExists("openssl");
+    const opensslAvailable = commandExists("openssl", ["version"]);
     if (!opensslAvailable) {
       warnings.push("OpenSSL not detected. We'll fall back to Node's crypto for secrets.");
+    }
+
+    const appSecret = parseAppSecret(path.join(root, ".env"));
+    if (appSecret === APP_SECRET_PLACEHOLDER) {
+      errors.push("APP_SECRET is still the public .env.example placeholder. Run `npm run setup` or replace it.");
+    } else if (appSecret && appSecret.length < 32) {
+      errors.push("APP_SECRET must contain at least 32 characters.");
     }
 
     const portFree = await checkPortAvailability(DEFAULT_PORT);

@@ -86,14 +86,15 @@ function clampCount(value: string | null) {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!requireAuthCookie(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await params;
   const campaign = await prisma.campaign.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
   if (!campaign) {
     return NextResponse.json({ error: "Campaign not found" }, { status: 404 });

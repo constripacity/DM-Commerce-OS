@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import type { ColumnFiltersState, ColumnDef, SortingState } from "@tanstack/react-table";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import { type Product } from "@prisma/client";
@@ -36,6 +37,7 @@ interface ProductsTabProps {
 
 const checkoutFormSchema = checkoutSchema.omit({ productId: true });
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
+type CheckoutAttribution = { campaignId?: string; sessionId?: string };
 type ProductFormValues = {
   title: string;
   description: string;
@@ -70,12 +72,14 @@ const productFormSchema = z.object({
 const STORAGE_KEY = "dm-os-product-views";
 
 export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
+  const searchParams = useSearchParams();
   const { products, setProducts, reloadOrders, isLoadingProducts } = useDashboardData();
   const { toast } = useToast();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [checkoutOpen, setCheckoutOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [checkoutProduct, setCheckoutProduct] = React.useState<Product | null>(null);
+  const [checkoutAttribution, setCheckoutAttribution] = React.useState<CheckoutAttribution>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [checkoutSubmitting, setCheckoutSubmitting] = React.useState(false);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -93,7 +97,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
 
   const checkoutForm = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
-    defaultValues: { buyerEmail: "", buyerName: "" },
+    defaultValues: { buyerEmail: "", buyerName: "", couponCode: "" },
   });
 
   const rows: ProductRow[] = React.useMemo(
@@ -172,13 +176,27 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
   }, []);
 
   const openCheckoutModal = React.useCallback(
-    (product: Product) => {
+    (product: Product, attribution: CheckoutAttribution = {}) => {
       setCheckoutProduct(product);
-      checkoutForm.reset({ buyerEmail: "", buyerName: "" });
+      setCheckoutAttribution(attribution);
+      checkoutForm.reset({ buyerEmail: "", buyerName: "", couponCode: "" });
       setCheckoutOpen(true);
     },
     [checkoutForm]
   );
+
+  const handledCheckoutQuery = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const productId = searchParams.get("checkout");
+    if (!productId || handledCheckoutQuery.current === productId) return;
+    const product = products.find((item) => item.id === productId);
+    if (!product) return;
+    handledCheckoutQuery.current = productId;
+    openCheckoutModal(product, {
+      campaignId: searchParams.get("campaign") ?? undefined,
+      sessionId: searchParams.get("session") ?? undefined,
+    });
+  }, [openCheckoutModal, products, searchParams]);
 
   React.useEffect(() => {
     if (!onRegisterCommands) return;
@@ -362,14 +380,19 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         const res = await fetch("/api/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...values, productId: checkoutProduct.id }),
+          body: JSON.stringify({
+            ...values,
+            productId: checkoutProduct.id,
+            ...checkoutAttribution,
+          }),
           credentials: "include",
         });
         if (!res.ok) throw new Error(await res.text());
+        const order = (await res.json()) as { totalCents: number; discountCents: number };
         await reloadOrders();
         toast({
           title: "Order recorded",
-          description: `${values.buyerName} now has access to ${checkoutProduct.title}.`,
+          description: `${values.buyerName} now has access to ${checkoutProduct.title} for ${formatCurrencyFromCents(order.totalCents)}${order.discountCents ? " after discount" : ""}.`,
         });
         setCheckoutOpen(false);
       } catch (error) {
@@ -382,7 +405,7 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
         setCheckoutSubmitting(false);
       }
     },
-    [checkoutProduct, reloadOrders, setCheckoutOpen, toast]
+    [checkoutAttribution, checkoutProduct, reloadOrders, setCheckoutOpen, toast]
   );
 
   const exportCsv = React.useCallback(() => {
@@ -823,6 +846,19 @@ export function ProductsTab({ onRegisterCommands }: ProductsTabProps) {
                     <FormLabel>Buyer name</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter buyer name" data-sim="checkout-buyer-name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={checkoutForm.control}
+                name="couponCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Coupon code (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Try LAUNCH20" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

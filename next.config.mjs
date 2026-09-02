@@ -1,12 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    // Keep typedRoutes in production while reducing dev-time CPU overhead.
-    typedRoutes: process.env.NODE_ENV === "production"
-  },
+  agentRules: false,
+  typedRoutes: process.env.NODE_ENV === "production",
   async headers() {
     return [
+      {
+        source: "/files/:filename",
+        headers: [
+          { key: "Content-Type", value: "application/pdf" },
+          { key: "Content-Disposition", value: "inline; filename=\":filename\"" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
       {
         source: "/(.*)",
         headers: [

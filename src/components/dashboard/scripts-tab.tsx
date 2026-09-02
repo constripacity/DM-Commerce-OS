@@ -8,10 +8,12 @@ import { z } from "zod";
 import {
   AlertTriangle,
   BookOpen,
+  Download,
   History,
   Plus,
   Sparkles,
   Type,
+  Upload,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,11 +27,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { DataTable } from "@/components/data-table";
 import { VariableChip } from "@/components/chat/variable-chip";
 import { scriptSchema } from "@/lib/validators";
 import { fillTemplate } from "@/lib/stateMachines/dmFlow";
-import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { useScripts } from "@/hooks/useDashboardData";
 
@@ -56,9 +56,8 @@ const historyStorageKey = "dm-commerce-script-history";
 
 export function ScriptsTab() {
   const { toast } = useToast();
-  const { data: scriptsData, error: scriptsError, isLoading, mutate } = useScripts(true);
-  const scripts = scriptsData ?? [];
-  const loading = !scriptsData && isLoading;
+  const { data: scriptsData, error: scriptsError, mutate } = useScripts(true);
+  const scripts = React.useMemo(() => scriptsData ?? [], [scriptsData]);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editingScript, setEditingScript] = React.useState<Script | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -76,6 +75,53 @@ export function ScriptsTab() {
   });
 
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const flowInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const exportFlow = React.useCallback(async () => {
+    try {
+      const response = await fetch("/api/flow-packs", { credentials: "include", cache: "no-store" });
+      if (!response.ok) throw new Error(await response.text());
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "dm-commerce-flow.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Flow exported", description: "Saved a portable, versioned JSON flow pack." });
+    } catch (error) {
+      toast({
+        title: "Flow export failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const importFlow = React.useCallback(async (file: File) => {
+    try {
+      if (file.size > 100 * 1024) throw new Error("Flow pack exceeds 100 KB");
+      const response = await fetch("/api/flow-packs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: await file.text(),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const result = (await response.json()) as { importedSteps: number };
+      await mutate();
+      toast({
+        title: "Flow imported",
+        description: `${result.importedSteps} validated steps are ready in the local script library.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Flow import rejected",
+        description: error instanceof Error ? error.message : "Please choose a valid flow pack.",
+        variant: "destructive",
+      });
+    }
+  }, [mutate, toast]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -263,46 +309,6 @@ export function ScriptsTab() {
     });
   };
 
-  const columns = React.useMemo<ColumnDef<Script>[]>(
-    () => [
-      {
-        accessorKey: "name",
-        header: "Script",
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.name}</div>
-            <Badge variant="outline" className="mt-1 border-border/50 capitalize text-[10px]">
-              {row.original.category}
-            </Badge>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "body",
-        header: "Snippet",
-        cell: ({ row }) => (
-          <p className="line-clamp-2 text-sm text-muted-foreground/70">{row.original.body}</p>
-        ),
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex gap-2 opacity-0 transition-opacity [tr:hover_&]:opacity-100">
-            <Button variant="outline" size="sm" onClick={() => openEditDrawer(row.original)} className="border-border/50">
-              Edit
-            </Button>
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(row.original)}>
-              Delete
-            </Button>
-          </div>
-        ),
-        meta: { className: "w-[160px]" },
-      },
-    ],
-    [handleDelete, openEditDrawer]
-  );
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -314,6 +320,23 @@ export function ScriptsTab() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={flowInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importFlow(file);
+              event.target.value = "";
+            }}
+          />
+          <Button variant="outline" className="gap-2" onClick={() => flowInputRef.current?.click()}>
+            <Upload className="h-4 w-4" /> Import flow
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => void exportFlow()}>
+            <Download className="h-4 w-4" /> Export flow
+          </Button>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-40 border-border/50 bg-background/50">
               <SelectValue placeholder="Filter category" />

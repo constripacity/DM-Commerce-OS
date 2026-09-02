@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_DATABASE_URL, requireDedicatedE2EDatabase } from "./tests/e2e-database";
+
+const e2eDatabaseUrl = requireDedicatedE2EDatabase(E2E_DATABASE_URL);
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: "**/*.spec.ts",
   timeout: 90_000,
   expect: {
     timeout: 5000,
@@ -13,12 +17,14 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev",
+    command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      APP_SECRET: "test-secret",
+      APP_SECRET: "playwright-secret-that-is-at-least-thirty-two-characters",
+      DATABASE_URL: e2eDatabaseUrl,
+      CHECKPOINT_DISABLE: "1",
     },
   },
   globalSetup: "./tests/global-setup.ts",

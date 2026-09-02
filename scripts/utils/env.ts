@@ -31,8 +31,8 @@ export function findProjectRoot(startDir: string = process.cwd()): string | null
   }
 }
 
-export function commandExists(command: string): boolean {
-  const result = spawnSync(command, ["--version"], {
+export function commandExists(command: string, versionArgs: string[] = ["--version"]): boolean {
+  const result = spawnSync(command, versionArgs, {
     stdio: "ignore",
     shell: false,
   });
@@ -40,11 +40,18 @@ export function commandExists(command: string): boolean {
 }
 
 export function detectPackageManager(): PackageManagerInfo | null {
-  if (commandExists("pnpm")) {
-    return { manager: "pnpm", command: "pnpm" };
+  const root = findProjectRoot();
+  if (root) {
+    const lockedManager = readPackageManagerFromLock(root);
+    if (lockedManager && commandExists(lockedManager)) {
+      return { manager: lockedManager, command: lockedManager };
+    }
   }
   if (commandExists("npm")) {
     return { manager: "npm", command: "npm" };
+  }
+  if (commandExists("pnpm")) {
+    return { manager: "pnpm", command: "pnpm" };
   }
   return null;
 }

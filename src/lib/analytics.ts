@@ -1,5 +1,6 @@
-import { addDays, eachDayOfInterval, format } from "date-fns";
+import { addDays, eachDayOfInterval, format, startOfDay } from "date-fns";
 import { prisma } from "@/lib/db";
+import { commerceEventTypes, decodeEventProperties } from "@/lib/events";
 
 export interface FunnelMetric {
   label: string;
@@ -9,9 +10,10 @@ export interface FunnelMetric {
 
 export interface ChartPoint {
   date: string;
-  impressions: number;
-  dms: number;
+  conversations: number;
+  checkouts: number;
   orders: number;
+  revenueCents: number;
 }
 
 export interface ProductSlice {
@@ -20,136 +22,184 @@ export interface ProductSlice {
   revenueCents: number;
 }
 
+export interface CampaignSlice {
+  name: string;
+  orders: number;
+  revenueCents: number;
+}
+
 export interface AnalyticsResponse {
+  window: { from: string; to: string; days: number };
   funnel: FunnelMetric[];
   totals: {
     orders: number;
+    customers: number;
     revenueCents: number;
     avgOrderValueCents: number;
+    objectionRate: number;
+    medianTimeToCheckoutSeconds: number | null;
   };
   chart: ChartPoint[];
   productMix: ProductSlice[];
+  campaignMix: CampaignSlice[];
 }
 
-export const funnelBaseline = {
-  impressions: 18240,
-  postCtr: 4.7,
-  dms: 710,
-  qualified: 218,
-};
+function distinctSessions(events: Array<{ sessionId: string | null }>) {
+  return new Set(events.flatMap((event) => (event.sessionId ? [event.sessionId] : [])));
+}
 
-export const funnelDelta = {
-  impressions: "+6.2%",
-  postCtr: "+0.4pt",
-  dms: "+5.1%",
-  qualified: "+3.3%",
-};
+function median(values: number[]) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
+}
 
-export const weeklyTrendSeed = [
-  { impressions: 2400, dms: 92 },
-  { impressions: 2560, dms: 96 },
-  { impressions: 2680, dms: 101 },
-  { impressions: 2500, dms: 94 },
-  { impressions: 2725, dms: 105 },
-  { impressions: 2610, dms: 98 },
-  { impressions: 2750, dms: 108 },
-];
+export async function getAnalyticsData(): Promise<AnalyticsResponse> {
+  const end = new Date();
+  const start = startOfDay(addDays(end, -6));
+  const [orders, events, customerCount] = await Promise.all([
+    prisma.order.findMany({
+      where: { createdAt: { gte: start, lte: end } },
+      include: { product: true, campaign: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.commerceEvent.findMany({
+      where: { createdAt: { gte: start, lte: end } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.customer.count({
+      where: { orders: { some: { createdAt: { gte: start, lte: end } } } },
+    }),
+  ]);
 
-export async function getAnalyticsData() {
-  const orders = await prisma.order.findMany({
-    include: { product: true },
-  });
-
-  const totalRevenueCents = orders.reduce(
-    (sum, order) => sum + order.product.priceCents,
-    0
+  const conversations = distinctSessions(
+    events.filter((event) => event.type === commerceEventTypes.conversationStarted),
   );
-  const ordersCount = orders.length;
+  const qualified = distinctSessions(
+    events.filter((event) => {
+      if (event.type !== commerceEventTypes.flowStageReached) return false;
+      return decodeEventProperties(event.propertiesJson).stage === "qualify";
+    }),
+  );
+  const checkoutSessions = distinctSessions(
+    events.filter((event) => event.type === commerceEventTypes.checkoutStarted),
+  );
+  const objectionSessions = distinctSessions(
+    events.filter((event) => event.type === commerceEventTypes.objectionRaised),
+  );
+  const convertedConversationSessions = new Set(
+    orders.flatMap((order) =>
+      order.sessionId && conversations.has(order.sessionId) ? [order.sessionId] : [],
+    ),
+  );
+  const deliveredOrders = new Set(
+    events
+      .filter((event) => event.type === commerceEventTypes.deliveryCompleted)
+      .flatMap((event) => (event.orderId ? [event.orderId] : [])),
+  );
 
-  const start = addDays(new Date(), -6);
-  const days = eachDayOfInterval({ start, end: new Date() });
-  const countsByDay = orders.reduce<Record<string, number>>((acc, order) => {
-    const key = format(order.createdAt, "yyyy-MM-dd");
-    acc[key] = (acc[key] ?? 0) + 1;
-    return acc;
-  }, {});
+  const totalRevenueCents = orders.reduce((sum, order) => sum + order.totalCents, 0);
+  const conversionRate = conversations.size
+    ? (convertedConversationSessions.size / conversations.size) * 100
+    : 0;
+  const objectionRate = conversations.size
+    ? (objectionSessions.size / conversations.size) * 100
+    : 0;
 
-  const chart = days.map((date, index) => {
+  const firstConversationBySession = new Map<string, Date>();
+  const firstCheckoutBySession = new Map<string, Date>();
+  for (const event of events) {
+    if (!event.sessionId) continue;
+    if (
+      event.type === commerceEventTypes.conversationStarted &&
+      !firstConversationBySession.has(event.sessionId)
+    ) {
+      firstConversationBySession.set(event.sessionId, event.createdAt);
+    }
+    if (
+      event.type === commerceEventTypes.checkoutStarted &&
+      !firstCheckoutBySession.has(event.sessionId)
+    ) {
+      firstCheckoutBySession.set(event.sessionId, event.createdAt);
+    }
+  }
+  const checkoutDurations = Array.from(firstCheckoutBySession.entries()).flatMap(
+    ([sessionId, checkoutAt]) => {
+      const startedAt = firstConversationBySession.get(sessionId);
+      if (!startedAt || checkoutAt < startedAt) return [];
+      return [Math.round((checkoutAt.getTime() - startedAt.getTime()) / 1000)];
+    },
+  );
+
+  const days = eachDayOfInterval({ start, end });
+  const chart = days.map((date) => {
     const key = format(date, "yyyy-MM-dd");
-    const seed =
-      weeklyTrendSeed[index] ??
-      weeklyTrendSeed[weeklyTrendSeed.length - 1];
+    const dayOrders = orders.filter(
+      (order) => format(order.createdAt, "yyyy-MM-dd") === key,
+    );
     return {
       date: key,
-      impressions: seed.impressions,
-      dms: seed.dms,
-      orders: countsByDay[key] ?? 0,
+      conversations: distinctSessions(
+        events.filter(
+          (event) =>
+            event.type === commerceEventTypes.conversationStarted &&
+            format(event.createdAt, "yyyy-MM-dd") === key,
+        ),
+      ).size,
+      checkouts: events.filter(
+        (event) =>
+          event.type === commerceEventTypes.checkoutStarted &&
+          format(event.createdAt, "yyyy-MM-dd") === key,
+      ).length,
+      orders: dayOrders.length,
+      revenueCents: dayOrders.reduce((sum, order) => sum + order.totalCents, 0),
     };
   });
 
-  const conversionRate =
-    ordersCount && funnelBaseline.dms
-      ? (ordersCount / funnelBaseline.dms) * 100
-      : 0;
-  const avgOrderValueCents = ordersCount
-    ? Math.round(totalRevenueCents / ordersCount)
-    : 0;
+  const productMixMap = new Map<string, { orders: number; revenueCents: number }>();
+  const campaignMixMap = new Map<string, { orders: number; revenueCents: number }>();
+  for (const order of orders) {
+    const productEntry = productMixMap.get(order.product.title) ?? {
+      orders: 0,
+      revenueCents: 0,
+    };
+    productEntry.orders += 1;
+    productEntry.revenueCents += order.totalCents;
+    productMixMap.set(order.product.title, productEntry);
 
-  const funnel = [
-    {
-      label: "Impressions",
-      value: funnelBaseline.impressions,
-      delta: funnelDelta.impressions,
-    },
-    {
-      label: "Post CTR",
-      value: `${funnelBaseline.postCtr.toFixed(1)}%`,
-      delta: funnelDelta.postCtr,
-    },
-    {
-      label: "DM conversations",
-      value: funnelBaseline.dms,
-      delta: funnelDelta.dms,
-    },
-    {
-      label: "Qualified leads",
-      value: funnelBaseline.qualified,
-      delta: funnelDelta.qualified,
-    },
-    {
-      label: "Orders",
-      value: ordersCount,
-      delta: ordersCount ? "+12 orders" : "Flat",
-    },
-    {
-      label: "Conversion rate",
-      value: `${conversionRate.toFixed(1)}%`,
-      delta: ordersCount ? "+0.3pt" : "Flat",
-    },
-  ];
+    const campaignName = order.campaign?.name ?? "Unattributed";
+    const campaignEntry = campaignMixMap.get(campaignName) ?? {
+      orders: 0,
+      revenueCents: 0,
+    };
+    campaignEntry.orders += 1;
+    campaignEntry.revenueCents += order.totalCents;
+    campaignMixMap.set(campaignName, campaignEntry);
+  }
 
-  const totals = {
-    orders: ordersCount,
-    revenueCents: totalRevenueCents,
-    avgOrderValueCents,
+  return {
+    window: { from: start.toISOString(), to: end.toISOString(), days: 7 },
+    funnel: [
+      { label: "Conversations", value: conversations.size, delta: "event-backed" },
+      { label: "Qualified leads", value: qualified.size, delta: "flow stage" },
+      { label: "Checkout starts", value: checkoutSessions.size, delta: "local handoff" },
+      { label: "Orders", value: orders.length, delta: "persisted" },
+      { label: "Delivered", value: deliveredOrders.size, delta: "verified asset" },
+      { label: "Conversion rate", value: `${conversionRate.toFixed(1)}%`, delta: "orders / DMs" },
+    ],
+    totals: {
+      orders: orders.length,
+      customers: customerCount,
+      revenueCents: totalRevenueCents,
+      avgOrderValueCents: orders.length ? Math.round(totalRevenueCents / orders.length) : 0,
+      objectionRate,
+      medianTimeToCheckoutSeconds: median(checkoutDurations),
+    },
+    chart,
+    productMix: Array.from(productMixMap, ([name, value]) => ({ name, ...value })),
+    campaignMix: Array.from(campaignMixMap, ([name, value]) => ({ name, ...value })),
   };
-
-  const productMixMap = orders.reduce<
-    Record<string, { count: number; revenue: number }>
-  >((acc, order) => {
-    const key = order.product.title;
-    const entry = acc[key] ?? { count: 0, revenue: 0 };
-    entry.count += 1;
-    entry.revenue += order.product.priceCents;
-    acc[key] = entry;
-    return acc;
-  }, {});
-
-  const productMix = Object.entries(productMixMap).map(([name, value]) => ({
-    name,
-    orders: value.count,
-    revenueCents: value.revenue,
-  }));
-
-  return { funnel, totals, chart, productMix };
 }

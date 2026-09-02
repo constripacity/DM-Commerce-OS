@@ -31,39 +31,37 @@ cd "$PROJECT_ROOT"
 info "DM-Commerce-OS One-Click Setup (macOS/Linux)"
 
 if ! command -v node >/dev/null 2>&1; then
-  error_exit "Node.js is required. Please install Node 18 or later and rerun this script."
+  error_exit "Node.js is required. Please install Node 20.19 or later and rerun this script."
 fi
 
-NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
-if [ "$NODE_MAJOR" -lt 18 ]; then
-  error_exit "Node.js 18+ is required. Current version: $(node -v)."
+if ! node -e "const [major, minor] = process.versions.node.split('.').map(Number); process.exit((major === 20 && minor >= 19) || (major === 22 && minor >= 13) || major >= 24 ? 0 : 1)"; then
+  error_exit "Use Node.js 20.19+, 22.13+, or 24+. Current version: $(node -v)."
 fi
 
-PACKAGE_MANAGER="pnpm"
-if ! command -v pnpm >/dev/null 2>&1; then
-  warn "pnpm not found. Falling back to npm. Install pnpm later for faster installs."
-  PACKAGE_MANAGER="npm"
+PACKAGE_MANAGER="npm"
+if [ -f "$PROJECT_ROOT/pnpm-lock.yaml" ] && command -v pnpm >/dev/null 2>&1; then
+  PACKAGE_MANAGER="pnpm"
 fi
 
-ENV_FILE="$PROJECT_ROOT/.env.local"
+ENV_FILE="$PROJECT_ROOT/.env"
 if [ ! -f "$ENV_FILE" ]; then
-  info "Creating .env.local with secure APP_SECRET"
+  info "Creating .env with secure APP_SECRET and local SQLite URL"
   if command -v openssl >/dev/null 2>&1; then
     SECRET="$(openssl rand -hex 32 | tr -d '\r')"
   else
     SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
   fi
-  printf "APP_SECRET=%s\n" "$SECRET" > "$ENV_FILE"
+  (umask 077; printf "APP_SECRET=%s\nDATABASE_URL=\"file:./dev.db\"\nCHECKPOINT_DISABLE=1\n" "$SECRET" > "$ENV_FILE")
 else
   if ! grep -q '^APP_SECRET=' "$ENV_FILE"; then
-    info "Adding APP_SECRET to existing .env.local"
+    info "Adding APP_SECRET to existing .env"
     if command -v openssl >/dev/null 2>&1; then
       SECRET="$(openssl rand -hex 32 | tr -d '\r')"
     else
       SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
     fi
     printf "\nAPP_SECRET=%s\n" "$SECRET" >> "$ENV_FILE"
-  elif grep -q 'APP_SECRET=GENERATE_AT_INSTALL' "$ENV_FILE"; then
+  elif grep -Eq 'APP_SECRET=(GENERATE_AT_INSTALL|CHANGE_ME_TO_A_LONG_RANDOM_STRING)' "$ENV_FILE"; then
     info "Replacing placeholder APP_SECRET"
     if command -v openssl >/dev/null 2>&1; then
       SECRET="$(openssl rand -hex 32 | tr -d '\r')"
@@ -74,15 +72,24 @@ else
     sed "s|^APP_SECRET=.*|APP_SECRET=$SECRET|" "$ENV_FILE" > "$tmp_file"
     mv "$tmp_file" "$ENV_FILE"
   else
-    info ".env.local already has an APP_SECRET"
+    info ".env already has an APP_SECRET"
+  fi
+  if ! grep -q '^DATABASE_URL=' "$ENV_FILE"; then
+    info "Adding the local SQLite DATABASE_URL to existing .env"
+    printf "\nDATABASE_URL=\"file:./dev.db\"\n" >> "$ENV_FILE"
+  fi
+  if ! grep -q '^CHECKPOINT_DISABLE=' "$ENV_FILE"; then
+    printf "CHECKPOINT_DISABLE=1\n" >> "$ENV_FILE"
   fi
 fi
+
+chmod 600 "$ENV_FILE"
 
 install_deps() {
   if [ "$PACKAGE_MANAGER" = "pnpm" ]; then
     pnpm install
   else
-    npm install
+    npm ci
   fi
 }
 

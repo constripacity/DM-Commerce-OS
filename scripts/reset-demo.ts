@@ -2,8 +2,6 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import readline from "node:readline";
-import { existsSync, rmSync } from "node:fs";
 import chalk from "chalk";
 import ora from "ora";
 import { detectPackageManager, findProjectRoot } from "./utils/env";
@@ -30,17 +28,6 @@ async function runStep(command: string, args: string[], label: string, cwd: stri
         spinner.fail(`${label} (exit code ${code ?? "unknown"})`);
         reject(new Error(`${label} failed with exit code ${code ?? "unknown"}`));
       }
-    });
-  });
-}
-
-async function promptYesNo(question: string): Promise<boolean> {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise<boolean>((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      const normalized = answer.trim().toLowerCase();
-      resolve(normalized === "y" || normalized === "yes");
     });
   });
 }
@@ -72,7 +59,7 @@ async function main() {
   } else {
     await runStep(
       "npm",
-      ["exec", "prisma", "migrate", "reset", "--force", "--skip-generate"],
+      ["exec", "--", "prisma", "migrate", "reset", "--force", "--skip-generate"],
       "Resetting Prisma database",
       root
     );
@@ -81,22 +68,13 @@ async function main() {
   if (pm.manager === "pnpm") {
     await runStep("pnpm", ["prisma", "generate"], "Regenerating Prisma client", root);
   } else {
-    await runStep("npm", ["exec", "prisma", "generate"], "Regenerating Prisma client", root);
+    await runStep("npm", ["exec", "--", "prisma", "generate"], "Regenerating Prisma client", root);
   }
 
   if (pm.manager === "pnpm") {
     await runStep("pnpm", ["db:seed"], "Seeding demo data", root);
   } else {
     await runStep("npm", ["run", "db:seed"], "Seeding demo data", root);
-  }
-
-  const dbPath = path.join(root, "prisma", "dev.db");
-  if (existsSync(dbPath)) {
-    const shouldDelete = await promptYesNo("Delete the local prisma/dev.db file as well? (y/N) ");
-    if (shouldDelete) {
-      rmSync(dbPath, { force: true });
-      console.log(chalk.yellow("Deleted prisma/dev.db"));
-    }
   }
 
   console.log();

@@ -10,7 +10,7 @@
 
 **Products + Checkout (0:30 – 0:48)**
 - "Let's spin up a new product. The form validates title, price, and local file path. Saving it drops it into the catalog instantly."
-- "From the table I can open a fake checkout modal, enter a name and email, and an order is created with a download link ready."
+- "From the table I can open the local checkout simulator, apply a coupon, and create an attributed order with a verified download."
 
 **DM Studio (0:48 – 1:08)**
 - "The DM Studio simulates a real conversation. I pick the campaign keyword, select scripts, and send the trigger message." 
@@ -18,8 +18,8 @@
 
 **Campaigns, Analytics, Settings (1:08 – 1:22)**
 - "Campaigns include CSV exports with 10 posts and stories to promote the keyword."
-- "Analytics blend seeded funnel metrics with live orders, and settings let you brand the experience with your color and logo."
+- "Analytics derive the funnel, revenue, timing, objections, and campaign attribution from persisted local events and orders."
 
 **Close (1:22 – 1:30)**
-- "Everything runs offline on SQLite with Prisma seeds, so feel free to reset the demo anytime with `npm run demo:reset`."
-- "Thanks for watching — this portfolio app proves the full DM-to-delivery story without touching a real API."
+- "Everything runs offline on SQLite with Prisma seeds, so feel free to reset the demo anytime with `npm run reset:demo`."
+- "Thanks for watching — this local-first reference app proves the full DM-to-delivery and attribution story without external APIs."

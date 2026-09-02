@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData> {
-  columns: ColumnDef<TData, any>[];
+  columns: ColumnDef<TData, unknown>[];
   data: TData[];
   emptyMessage?: string;
   isLoading?: boolean;
@@ -40,7 +40,7 @@ export function DataTable<TData>({ columns, data, emptyMessage = "No data", isLo
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
-                  const meta = header.column.columnDef.meta as any;
+                  const meta = header.column.columnDef.meta as { className?: string } | undefined;
                   return (
                     <TableHead key={header.id} className={cn(meta?.className)}>
                       {header.isPlaceholder ? null : (
@@ -71,7 +71,7 @@ export function DataTable<TData>({ columns, data, emptyMessage = "No data", isLo
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => {
-                    const meta = cell.column.columnDef.meta as any;
+                    const meta = cell.column.columnDef.meta as { className?: string } | undefined;
                     return (
                       <TableCell key={cell.id} className={cn(meta?.className)}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import type { Script } from "@prisma/client";
 import { Plus, Trash2, Zap, MessageSquare, Settings2, Keyboard } from "lucide-react";
 import { useDashboardData } from "@/components/dashboard/dashboard-data-context";
@@ -12,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { fillTemplate, getNextAutoReply, attachStageMarker, parseStageFromText, type DMFlowStage } from "@/lib/stateMachines/dmFlow";
+import { fillTemplate, getNextAutoReply, attachStageMarker, parseStageFromText, classifyDMIntent, type DMFlowStage } from "@/lib/stateMachines/dmFlow";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { useCampaigns, useMessages, useScripts } from "@/hooks/useDashboardData";
@@ -30,13 +31,6 @@ interface InspectorState {
 }
 
 const stageOrder: DMFlowStage[] = ["pitch", "qualify", "checkout", "delivery"];
-const categoryStageMap: Record<string, DMFlowStage> = {
-  pitch: "pitch",
-  qualify: "qualify",
-  checkout: "checkout",
-  delivery: "delivery",
-  objections: "objection",
-};
 const stageCategoryMap: Record<DMFlowStage, string> = {
   pitch: "pitch",
   qualify: "qualify",
@@ -45,10 +39,6 @@ const stageCategoryMap: Record<DMFlowStage, string> = {
   objection: "objections",
 };
 
-const interestSignals = ["yes", "yeah", "yep", "sure", "interested", "sounds", "great", "cool", "love", "want", "ready"];
-const checkoutSignals = ["how", "price", "cost", "link", "checkout", "buy", "purchase", "send", "share", "where"];
-const purchaseSignals = ["bought", "paid", "done", "completed", "grabbed", "purchased", "checkout complete", "i'm in", "got it"];
-const objectionSignals = ["not sure", "maybe", "later", "expensive", "costly", "can't", "cant", "don't know", "idk", "unsure", "think about"];
 const categoryLabelMap: Record<string, string> = {
   pitch: "Pitch",
   qualify: "Qualify",
@@ -66,6 +56,7 @@ const intentDisplayMap: Record<InspectorState["intent"], { label: string; tone: 
 };
 
 export function DMStudioTab() {
+  const router = useRouter();
   const { products } = useDashboardData();
   const { toast } = useToast();
   const { data: campaignsData, error: campaignsError } = useCampaigns(true);
@@ -83,8 +74,8 @@ export function DMStudioTab() {
   const [scriptOrder, setScriptOrder] = React.useState<Record<string, string[]>>({});
   const [inspector, setInspector] = React.useState<InspectorState>({ intent: "neutral" });
 
-  const campaigns = campaignsData ?? [];
-  const scripts = scriptsData ?? [];
+  const campaigns = React.useMemo(() => campaignsData ?? [], [campaignsData]);
+  const scripts = React.useMemo(() => scriptsData ?? [], [scriptsData]);
   const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? campaigns[0];
   const selectedProduct = products.find((product) => product.id === (selectedProductId ?? products[0]?.id));
 
@@ -240,16 +231,32 @@ export function DMStudioTab() {
         sessionId,
         role: message.role,
         text: message.stage ? attachStageMarker(message.text, message.stage) : message.text,
+        campaignId: selectedCampaign?.id ?? null,
+        productId: selectedProduct?.id ?? null,
       };
-      await fetch("/api/messages", {
+      const response = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         credentials: "include",
       });
+      if (!response.ok) throw new Error("The local conversation could not be saved");
     },
-    [sessionId]
+    [selectedCampaign?.id, selectedProduct?.id, sessionId]
   );
+
+  const openCheckout = React.useCallback(() => {
+    if (!selectedProduct) {
+      toast({ title: "Choose a product first", variant: "destructive" });
+      return;
+    }
+    const params = new URLSearchParams({
+      checkout: selectedProduct.id,
+      session: sessionId,
+    });
+    if (selectedCampaign) params.set("campaign", selectedCampaign.id);
+    router.push(`/dashboard/products?${params.toString()}`);
+  }, [router, selectedCampaign, selectedProduct, sessionId, toast]);
 
   const maybeRespond = React.useCallback(
     async (latestUser: string) => {
@@ -264,15 +271,25 @@ export function DMStudioTab() {
         stage: result.stage,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
-      await persistMessage({ role: "assistant", text: result.text, stage: result.stage });
-      setIsTyping(false);
+      try {
+        setMessages((prev) => [...prev, assistantMessage]);
+        await persistMessage({ role: "assistant", text: result.text, stage: result.stage });
+      } catch (error) {
+        setMessages((prev) => prev.filter((message) => message.id !== assistantMessage.id));
+        throw error;
+      } finally {
+        setIsTyping(false);
+      }
     },
     [buildFlowContext, persistMessage]
   );
 
   const handleSend = React.useCallback(async (overrideText?: string) => {
-    const text = overrideText ?? draft;
+    // ChatInput's onSubmit can invoke this with a click/submit event rather than
+    // a string, so only a real string counts as an explicit override; anything
+    // else means "send the current draft".
+    const override = typeof overrideText === "string" ? overrideText : undefined;
+    const text = override ?? draft;
     if (!text.trim()) return;
     const userMessage: ChatMessageItem = {
       id: crypto.randomUUID(),
@@ -280,13 +297,27 @@ export function DMStudioTab() {
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-    if (!overrideText) setDraft("");
+    if (override === undefined) setDraft("");
     setIsSending(true);
     setMessages((prev) => [...prev, userMessage]);
-    await persistMessage({ role: "user", text });
-    await maybeRespond(text);
-    setIsSending(false);
-  }, [draft, maybeRespond, persistMessage]);
+    let userSaved = false;
+    try {
+      await persistMessage({ role: "user", text });
+      userSaved = true;
+      await maybeRespond(text);
+    } catch (error) {
+      if (!userSaved) {
+        setMessages((prev) => prev.filter((message) => message.id !== userMessage.id));
+      }
+      toast({
+        title: userSaved ? "Automatic reply was not saved" : "Message was not saved",
+        description: error instanceof Error ? error.message : "Try the local conversation again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  }, [draft, maybeRespond, persistMessage, toast]);
 
   React.useEffect(() => {
     const handler = (e: Event) => {
@@ -503,7 +534,7 @@ export function DMStudioTab() {
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground/70">Automation nudges appear as the assistant responds.</p>
           <div className="mt-3">
-            <ChatWindow messages={messages} />
+            <ChatWindow messages={messages} onCheckout={openCheckout} />
           </div>
         </div>
         <div className="rounded-xl border border-border/50 bg-card/80 p-4 shadow-lg shadow-black/20 backdrop-blur-sm">
@@ -543,13 +574,13 @@ export function DMStudioTab() {
         <div className="rounded-lg border border-border/40 bg-background/40 p-4">
           <p className="text-sm font-semibold">Need to test checkout?</p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Jump to Products and run the fake checkout to experience fulfillment.
+            Jump to Products and run the simulated local checkout to experience fulfillment.
           </p>
           <Button
             className="mt-3 w-full gap-2"
             size="sm"
             data-sim="dm-open-checkout"
-            onClick={() => window.dispatchEvent(new CustomEvent("dm-open-checkout"))}
+            onClick={openCheckout}
           >
             <Plus className="h-4 w-4" /> Open Checkout
           </Button>
@@ -611,12 +642,5 @@ function computeNextStage(completed: Set<DMFlowStage>) {
 }
 
 function evaluateIntent(message: string, keyword: string): InspectorState["intent"] {
-  const normalized = message.toLowerCase();
-  if (!normalized.trim()) return "neutral";
-  if (keyword && normalized.includes(keyword.toLowerCase())) return "keyword";
-  if (purchaseSignals.some((signal) => normalized.includes(signal))) return "purchase";
-  if (checkoutSignals.some((signal) => normalized.includes(signal))) return "checkout";
-  if (objectionSignals.some((signal) => normalized.includes(signal))) return "objection";
-  if (interestSignals.some((signal) => normalized.includes(signal))) return "interest";
-  return "neutral";
+  return classifyDMIntent(message, keyword);
 }

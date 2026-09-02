@@ -6,19 +6,35 @@ type PWAProviderProps = { children: ReactNode };
 
 export function PWAProvider({ children }: PWAProviderProps) {
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined") return;
 
-    const register = () => {
-      navigator.serviceWorker.register("/sw.js").catch((error) => {
-        console.error("Service worker registration failed:", error);
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          const scriptUrl =
+            registration.active?.scriptURL ??
+            registration.waiting?.scriptURL ??
+            registration.installing?.scriptURL;
+          if (scriptUrl && new URL(scriptUrl).pathname === "/sw.js") {
+            void registration.unregister();
+          }
+        }
+      }).catch((error) => {
+        console.error("Legacy service worker cleanup failed:", error);
       });
-    };
+    }
 
-    window.addEventListener("load", register);
-
-    return () => {
-      window.removeEventListener("load", register);
-    };
+    if ("caches" in window) {
+      window.caches.keys().then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((cacheName) => cacheName.startsWith("dm-commerce-os-cache-"))
+            .map((cacheName) => window.caches.delete(cacheName)),
+        ),
+      ).catch((error) => {
+        console.error("Legacy application cache cleanup failed:", error);
+      });
+    }
   }, []);
 
   return children;

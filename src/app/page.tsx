@@ -15,7 +15,7 @@ const features = [
   {
     icon: FileText,
     title: "Products & Orders",
-    description: "Prototype offers, fake checkouts, and instant file delivery without touching prod data.",
+    description: "Prototype offers, simulated local payments, and verified file delivery without touching production data.",
   },
   {
     icon: Bot,
@@ -64,9 +64,9 @@ export default function HomePage() {
                 size="lg"
                 className="border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 hover:text-white"
               >
-                <Link href={"https://github.com/constripacity/DM-Commerce-OS/blob/main/docs/BEGINNER-GUIDE.md" as any} target="_blank" rel="noreferrer">
+                <a href="https://github.com/constripacity/DM-Commerce-OS/blob/main/docs/BEGINNER-GUIDE.md" target="_blank" rel="noreferrer">
                   How to run locally
-                </Link>
+                </a>
               </Button>
             </div>
           </div>

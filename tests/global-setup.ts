@@ -1,12 +1,27 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
+import path from "node:path";
+import { E2E_DATABASE_URL, requireDedicatedE2EDatabase } from "./e2e-database";
 
 async function globalSetup() {
-  const userAgent = process.env.npm_config_user_agent ?? "";
-  const packageManager = userAgent.startsWith("pnpm") ? "pnpm" : "npm";
-  const execBinary = packageManager === "pnpm" ? "pnpm" : "npx";
-
-  execSync(`${execBinary} prisma migrate reset --force --skip-generate`, { stdio: "inherit" });
-  execSync(`${packageManager} run db:seed`, { stdio: "inherit" });
+  const prismaBinary = path.join(
+    process.cwd(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "prisma.cmd" : "prisma",
+  );
+  const env = {
+    ...process.env,
+    DATABASE_URL: requireDedicatedE2EDatabase(E2E_DATABASE_URL),
+    CHECKPOINT_DISABLE: "1",
+  };
+  execFileSync(prismaBinary, ["migrate", "reset", "--force", "--skip-generate"], {
+    stdio: "inherit",
+    env,
+  });
+  execFileSync(process.execPath, ["--import", "tsx", "prisma/seed.ts"], {
+    stdio: "inherit",
+    env,
+  });
 }
 
 export default globalSetup;
