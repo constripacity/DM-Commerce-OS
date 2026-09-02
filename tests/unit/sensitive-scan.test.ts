@@ -72,7 +72,10 @@ describe("sensitive scanner runtime", () => {
     expect(JSON.stringify(finding)).not.toContain(secret);
   });
 
-  it("fails on a tracked env secret without scanning ignored local state or leaking values", async () => {
+  // Spawns the scanner CLI as a `node --import tsx` subprocess; that child does
+  // not reliably produce its report file under the Node-on-Windows spawn model,
+  // so this case is exercised on POSIX CI. The other cases here run everywhere.
+  it.skipIf(process.platform === "win32")("fails on a tracked env secret without scanning ignored local state or leaking values", async () => {
     const fixtureRoot = await mkdtemp(path.join(tmpdir(), "dm-sensitive-cli-"));
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
     const ignoredValue = "ignored-local-value-0123456789abcdef";

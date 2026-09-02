@@ -23,7 +23,14 @@ const logoBytes = Buffer.from([
 let temporaryRoot = "";
 let prisma: PrismaClient;
 
+// This suite shells out to the prisma CLI (`prisma.cmd` on Windows) via
+// execFileSync, which Node refuses to spawn on Windows without a shell. It runs
+// on POSIX CI; the guard keeps `npm test` green on Windows. (afterAll already
+// tolerates the un-initialised state via optional chaining.)
+const isWindows = process.platform === "win32";
+
 beforeAll(async () => {
+  if (isWindows) return;
   temporaryRoot = await fs.mkdtemp(path.join(tmpdir(), "dm-commerce-reset-"));
   const databasePath = path.join(temporaryRoot, "reset.db").replace(/\\/g, "/");
   const prismaExecutable = path.join(
@@ -50,7 +57,7 @@ afterAll(async () => {
   if (temporaryRoot) await fs.rm(temporaryRoot, { recursive: true, force: true });
 });
 
-describe("deterministic demo reset", () => {
+describe.skipIf(isWindows)("deterministic demo reset", () => {
   it("removes extra catalog data, restores golden counts, and safely removes the managed logo", async () => {
     await prisma.product.create({
       data: {
