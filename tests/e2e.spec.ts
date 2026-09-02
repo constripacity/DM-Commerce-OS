@@ -26,7 +26,7 @@ test("complete local DM to attributed delivery loop", async ({ page }) => {
   await expect(page.getByText(productTitle, { exact: true }).first()).toBeVisible();
 
   await page.getByRole("link", { name: "DM Studio" }).click();
-  await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversation", exact: true })).toBeVisible();
 
   const productSelect = page.locator("button[role='combobox']").nth(1);
   await productSelect.click();
@@ -34,15 +34,15 @@ test("complete local DM to attributed delivery loop", async ({ page }) => {
 
   const input = page.getByPlaceholder("Type a reply… Use / to insert scripts.");
   await input.fill("GUIDE");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.locator('[data-testid="dm-message-assistant"][data-stage="pitch"]')).toContainText(productTitle);
 
   await input.fill("Yes, I am interested");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.locator('[data-testid="dm-message-assistant"][data-stage="qualify"]')).toBeVisible();
 
   await input.fill("How much does it cost?");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   const checkoutMessage = page.locator('[data-testid="dm-message-assistant"][data-stage="checkout"]');
   await expect(checkoutMessage).toBeVisible();
   await checkoutMessage.getByRole("button", { name: "Simulate checkout" }).click();
@@ -63,6 +63,9 @@ test("complete local DM to attributed delivery loop", async ({ page }) => {
     "href",
     "/files/creator-guide.pdf",
   );
+
+  // Close the order-detail dialog so the sidebar nav is interactable again.
+  await page.keyboard.press("Escape");
 
   await page.getByRole("link", { name: "Analytics" }).click();
   await expect(page.getByRole("heading", { name: "Campaign attribution" })).toBeVisible();

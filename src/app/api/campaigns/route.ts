@@ -19,7 +19,10 @@ export async function GET(request: Request) {
   }
 
   const campaigns = await prisma.campaign.findMany({
-    orderBy: { startsOn: "asc" },
+    // Most-recent first, so the default selection (campaigns[0]) is the current
+    // campaign — DM Studio and the flow-pack export both key off "the current
+    // campaign", and the seed's active campaign starts today.
+    orderBy: { startsOn: "desc" },
   });
 
   return NextResponse.json(campaigns);

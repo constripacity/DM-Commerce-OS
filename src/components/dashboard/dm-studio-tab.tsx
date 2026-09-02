@@ -285,7 +285,11 @@ export function DMStudioTab() {
   );
 
   const handleSend = React.useCallback(async (overrideText?: string) => {
-    const text = overrideText ?? draft;
+    // ChatInput's onSubmit can invoke this with a click/submit event rather than
+    // a string, so only a real string counts as an explicit override; anything
+    // else means "send the current draft".
+    const override = typeof overrideText === "string" ? overrideText : undefined;
+    const text = override ?? draft;
     if (!text.trim()) return;
     const userMessage: ChatMessageItem = {
       id: crypto.randomUUID(),
@@ -293,7 +297,7 @@ export function DMStudioTab() {
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-    if (!overrideText) setDraft("");
+    if (override === undefined) setDraft("");
     setIsSending(true);
     setMessages((prev) => [...prev, userMessage]);
     let userSaved = false;

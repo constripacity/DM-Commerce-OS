@@ -146,8 +146,12 @@ function LoginForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-slate-200">Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
+                        <div className="relative">
+                          {/* FormControl (a Radix Slot) must wrap the Input directly so
+                              its generated id lands on the input and the FormLabel's
+                              htmlFor actually points at it — otherwise the field has no
+                              accessible label. */}
+                          <FormControl>
                             <Input
                               placeholder="demo123"
                               type={showPassword ? "text" : "password"}
@@ -155,17 +159,17 @@ function LoginForm() {
                               className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400 focus-visible:ring-blue-300 focus-visible:ring-offset-slate-900"
                               {...field}
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute inset-y-0 right-0 mr-1 flex h-full items-center px-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white"
-                              onClick={() => setShowPassword((value) => !value)}
-                            >
-                              {showPassword ? "Hide" : "Show"}
-                            </Button>
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute inset-y-0 right-0 mr-1 flex h-full items-center px-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white"
+                            onClick={() => setShowPassword((value) => !value)}
+                          >
+                            {showPassword ? "Hide" : "Show"}
+                          </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

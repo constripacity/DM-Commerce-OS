@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const [campaign, scripts] = await Promise.all([
     campaignId
       ? prisma.campaign.findUnique({ where: { id: campaignId } })
-      : prisma.campaign.findFirst({ orderBy: { startsOn: "asc" } }),
+      : prisma.campaign.findFirst({ orderBy: { startsOn: "desc" } }),
     prisma.script.findMany({ orderBy: [{ category: "asc" }, { createdAt: "asc" }] }),
   ]);
   if (!campaign) {
